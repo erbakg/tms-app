@@ -1,12 +1,15 @@
 import { BadRequestException, Controller, Get, Inject, Param, Post, Req } from '@nestjs/common';
 import type { FastifyRequest } from 'fastify';
 
+import { Roles } from '../../auth/auth.decorators.js';
+
 import { DocumentService } from '../application/document.service.js';
 import type { LoadDocument } from '../domain/load-document.js';
 import type { DocumentExtraction } from '../../ai/extraction.js';
 
 const SUPPORTED_DOCUMENT_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 
+@Roles('ADMIN', 'DISPATCHER')
 @Controller('loads/:loadId/documents')
 export class DocumentsController {
   constructor(@Inject(DocumentService) private readonly documentService: DocumentService) {}

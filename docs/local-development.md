@@ -22,6 +22,12 @@ pnpm --filter @312kg/api worker:dev
 
 API слушает `http://localhost:3000`; endpoint проверки состояния — `GET /health`.
 
+Перед первым запуском замените `AUTH_JWT_SECRET` в `apps/api/.env` случайной строкой длиной не менее 32 символов. После миграций создайте первого администратора локальной командой (значения не сохраняются в Git):
+
+```bash
+ADMIN_EMAIL="admin@example.com" ADMIN_FULL_NAME="Admin" ADMIN_PASSWORD="use-a-strong-password" pnpm --filter @312kg/api admin:create
+```
+
 Последняя команда запускает отдельный worker AI-извлечения. Для обычной локальной разработки он использует `AI_PROVIDER="mock"` и не обращается к внешним сервисам. API и worker должны быть запущены одновременно, если нужно получить результат извлечения, а не только статус `PENDING`.
 
 ## Gemini

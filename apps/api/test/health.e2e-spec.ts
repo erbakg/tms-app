@@ -1,9 +1,12 @@
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
+import { randomUUID } from 'node:crypto';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { configureApp } from '../src/app.config.js';
 import { AppModule } from '../src/app.module.js';
+import { AuthService } from '../src/auth/auth.service.js';
+import { JwtService } from '../src/auth/jwt.service.js';
 
 describe('GET /health', () => {
   let app: NestFastifyApplication;
@@ -27,10 +30,12 @@ describe('GET /health', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
+    const headers = await dispatcherHeaders(app);
 
     const response = await app.inject({
       method: 'POST',
       url: '/loads',
+      headers,
       payload: { brokerLoadNumber: '784521' },
     });
 
@@ -46,10 +51,12 @@ describe('GET /health', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
+    const headers = await dispatcherHeaders(app);
 
     const draftResponse = await app.inject({
       method: 'POST',
       url: '/loads',
+      headers,
       payload: { brokerLoadNumber: '784521' },
     });
     const draft = draftResponse.json<{ id: string }>();
@@ -57,6 +64,7 @@ describe('GET /health', () => {
     const createdStopResponse = await app.inject({
       method: 'POST',
       url: `/loads/${draft.id}/stops`,
+      headers,
       payload: {
         type: 'PICKUP',
         facilityName: 'Acme Warehouse',
@@ -77,7 +85,7 @@ describe('GET /health', () => {
       referenceNumber: 'PU-1098',
     });
 
-    const loadResponse = await app.inject({ method: 'GET', url: `/loads/${draft.id}` });
+    const loadResponse = await app.inject({ method: 'GET', url: `/loads/${draft.id}`, headers });
 
     expect(loadResponse.statusCode).toBe(200);
     expect(loadResponse.json()).toMatchObject({
@@ -96,13 +104,15 @@ describe('GET /health', () => {
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await app.init();
+    const headers = await dispatcherHeaders(app);
 
-    const draftResponse = await app.inject({ method: 'POST', url: '/loads', payload: {} });
+    const draftResponse = await app.inject({ method: 'POST', url: '/loads', headers, payload: {} });
     const draft = draftResponse.json<{ id: string }>();
     const pickup = (
       await app.inject({
         method: 'POST',
         url: `/loads/${draft.id}/stops`,
+        headers,
         payload: { type: 'PICKUP', facilityName: 'First Stop' },
       })
     ).json<{ id: string }>();
@@ -110,6 +120,7 @@ describe('GET /health', () => {
       await app.inject({
         method: 'POST',
         url: `/loads/${draft.id}/stops`,
+        headers,
         payload: { type: 'DELIVERY', facilityName: 'Second Stop' },
       })
     ).json<{ id: string }>();
@@ -117,6 +128,7 @@ describe('GET /health', () => {
     const updateResponse = await app.inject({
       method: 'PATCH',
       url: `/loads/${draft.id}/stops/${pickup.id}`,
+      headers,
       payload: { referenceNumber: 'PU-UPDATED' },
     });
     expect(updateResponse.statusCode).toBe(200);
@@ -125,6 +137,7 @@ describe('GET /health', () => {
     const reorderResponse = await app.inject({
       method: 'PATCH',
       url: `/loads/${draft.id}/stops/reorder`,
+      headers,
       payload: { stopIds: [delivery.id, pickup.id] },
     });
     expect(reorderResponse.statusCode).toBe(200);
@@ -136,10 +149,11 @@ describe('GET /health', () => {
     const deleteResponse = await app.inject({
       method: 'DELETE',
       url: `/loads/${draft.id}/stops/${pickup.id}`,
+      headers,
     });
     expect(deleteResponse.statusCode).toBe(204);
 
-    const loadResponse = await app.inject({ method: 'GET', url: `/loads/${draft.id}` });
+    const loadResponse = await app.inject({ method: 'GET', url: `/loads/${draft.id}`, headers });
     expect(loadResponse.json()).toMatchObject({
       stops: [{ id: delivery.id, position: 1 }],
     });
@@ -150,14 +164,15 @@ describe('GET /health', () => {
     app = moduleRef.createNestApplication<NestFastifyApplication>(new FastifyAdapter());
     await configureApp(app);
     await app.init();
+    const headers = await dispatcherHeaders(app);
 
-    const draftResponse = await app.inject({ method: 'POST', url: '/loads', payload: {} });
+    const draftResponse = await app.inject({ method: 'POST', url: '/loads', headers, payload: {} });
     const draft = draftResponse.json<{ id: string }>();
 
     const originalResponse = await app.inject({
       method: 'POST',
       url: `/loads/${draft.id}/documents`,
-      headers: { 'content-type': 'multipart/form-data; boundary=TestBoundary' },
+      headers: { ...headers, 'content-type': 'multipart/form-data; boundary=TestBoundary' },
       payload: multipartPayload('original-rate-confirmation.pdf', 'Original RC'),
     });
     expect(originalResponse.statusCode).toBe(201);
@@ -170,7 +185,7 @@ describe('GET /health', () => {
     const revisedResponse = await app.inject({
       method: 'POST',
       url: `/loads/${draft.id}/documents`,
-      headers: { 'content-type': 'multipart/form-data; boundary=TestBoundary' },
+      headers: { ...headers, 'content-type': 'multipart/form-data; boundary=TestBoundary' },
       payload: multipartPayload('revised-rate-confirmation.pdf', 'Revised RC'),
     });
     expect(revisedResponse.statusCode).toBe(201);
@@ -184,6 +199,7 @@ describe('GET /health', () => {
     const extractionResponse = await app.inject({
       method: 'GET',
       url: `/loads/${draft.id}/documents/${revisedDocument.id}/extraction`,
+      headers,
     });
     expect(extractionResponse.statusCode).toBe(200);
     expect(extractionResponse.json()).toMatchObject({
@@ -195,6 +211,7 @@ describe('GET /health', () => {
     const documentsResponse = await app.inject({
       method: 'GET',
       url: `/loads/${draft.id}/documents`,
+      headers,
     });
     expect(documentsResponse.statusCode).toBe(200);
     expect(documentsResponse.json()).toMatchObject([
@@ -203,6 +220,21 @@ describe('GET /health', () => {
     ]);
   });
 });
+
+const dispatcherHeaders = async (
+  app: NestFastifyApplication,
+): Promise<{ authorization: string }> => {
+  const authService = app.get(AuthService);
+  const jwt = app.get(JwtService);
+  const user = await authService.createUser({
+    email: `dispatcher-${randomUUID()}@example.test`,
+    fullName: 'Test Dispatcher',
+    password: 'test-password',
+    role: 'DISPATCHER',
+  });
+
+  return { authorization: `Bearer ${jwt.sign(user)}` };
+};
 
 const multipartPayload = (filename: string, contents: string): Buffer =>
   Buffer.from(

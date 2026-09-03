@@ -1,6 +1,12 @@
 # Контракт API — текущая реализация
 
-API пока не версионируется. Версионирование и аутентификация будут добавлены до подключения мобильного или внешнего клиента.
+API пока не версионируется. Все endpoints, кроме `GET /health` и `POST /auth/login`, требуют JWT Bearer token. Операции Dispatcher доступны только ролям `ADMIN` и `DISPATCHER`.
+
+## Аутентификация
+
+### `POST /auth/login`
+
+Принимает email и password, возвращает `accessToken` и сведения о пользователе. Token передаётся в последующих запросах как `Authorization: Bearer <accessToken>`.
 
 ## Черновики Load
 

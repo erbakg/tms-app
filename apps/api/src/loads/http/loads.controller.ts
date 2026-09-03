@@ -10,6 +10,8 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 
+import { Roles } from '../../auth/auth.decorators.js';
+
 import { LoadService } from '../application/load.service.js';
 import type { Load, LoadDetails } from '../application/load.service.js';
 
@@ -17,6 +19,7 @@ const createLoadDraftSchema = z.object({
   brokerLoadNumber: z.string().trim().min(1).max(100).optional(),
 });
 
+@Roles('ADMIN', 'DISPATCHER')
 @Controller('loads')
 export class LoadsController {
   constructor(@Inject(LoadService) private readonly loadService: LoadService) {}

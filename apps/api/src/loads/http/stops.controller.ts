@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { z } from 'zod';
 
+import { Roles } from '../../auth/auth.decorators.js';
+
 import { StopService } from '../application/stop.service.js';
 import type { Stop } from '../domain/stop.js';
 
@@ -41,6 +43,7 @@ const reorderStopsSchema = z.object({
     .refine((stopIds) => new Set(stopIds).size === stopIds.length, 'Stop IDs must be unique.'),
 });
 
+@Roles('ADMIN', 'DISPATCHER')
 @Controller('loads/:loadId/stops')
 export class StopsController {
   constructor(@Inject(StopService) private readonly stopService: StopService) {}

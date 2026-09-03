@@ -43,6 +43,7 @@ model User {
   email         String   @unique
   fullName      String
   role          UserRole
+  passwordHash  String
   createdAt     DateTime @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime @updatedAt @db.Timestamptz(3)
   assignedLoads Load[]   @relation("AssignedDriver")
