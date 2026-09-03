@@ -65,3 +65,11 @@ API пока не версионируется. Версионирование �
 ### `GET /loads/:loadId/documents/:documentId/download`
 
 Возвращает короткоживущую (5 минут) signed URL для скачивания документа. Если документ не принадлежит указанному Load или отсутствует, API возвращает `DOCUMENT_NOT_FOUND`.
+
+## AI-извлечение Rate Confirmation
+
+После каждой загрузки Rate Confirmation API создаёт запись extraction со статусом `PENDING` и ставит задачу в Redis/BullMQ. Статус не означает, что данные уже внесены в Load: результат будет доступен диспетчеру для обязательной проверки и ручной корректировки.
+
+### `GET /loads/:loadId/documents/:documentId/extraction`
+
+Возвращает статус и результат extraction. Возможные статусы: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`.

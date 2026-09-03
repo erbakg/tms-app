@@ -3,6 +3,7 @@ import type { FastifyRequest } from 'fastify';
 
 import { DocumentService } from '../application/document.service.js';
 import type { LoadDocument } from '../domain/load-document.js';
+import type { DocumentExtraction } from '../../ai/extraction.js';
 
 const SUPPORTED_DOCUMENT_MIME_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 
@@ -35,6 +36,14 @@ export class DocumentsController {
   @Get()
   findByLoadId(@Param('loadId') loadId: string): Promise<LoadDocument[]> {
     return this.documentService.findByLoadId(loadId);
+  }
+
+  @Get(':documentId/extraction')
+  getExtraction(
+    @Param('loadId') loadId: string,
+    @Param('documentId') documentId: string,
+  ): Promise<DocumentExtraction> {
+    return this.documentService.getExtraction(loadId, documentId);
   }
 
   @Get(':documentId/download')

@@ -180,6 +180,18 @@ describe('GET /health', () => {
       isCurrent: true,
     });
 
+    const revisedDocument = revisedResponse.json<{ id: string }>();
+    const extractionResponse = await app.inject({
+      method: 'GET',
+      url: `/loads/${draft.id}/documents/${revisedDocument.id}/extraction`,
+    });
+    expect(extractionResponse.statusCode).toBe(200);
+    expect(extractionResponse.json()).toMatchObject({
+      documentId: revisedDocument.id,
+      status: 'PENDING',
+      provider: 'mock',
+    });
+
     const documentsResponse = await app.inject({
       method: 'GET',
       url: `/loads/${draft.id}/documents`,

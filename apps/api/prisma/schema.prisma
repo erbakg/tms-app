@@ -31,6 +31,13 @@ enum DocumentKind {
   OTHER
 }
 
+enum ExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id            String   @id @default(uuid()) @db.Uuid
   email         String   @unique
@@ -79,18 +86,34 @@ model Stop {
 }
 
 model LoadDocument {
-  id         String       @id @default(uuid()) @db.Uuid
-  loadId     String       @db.Uuid
+  id         String              @id @default(uuid()) @db.Uuid
+  loadId     String              @db.Uuid
   kind       DocumentKind
   version    Int
   filename   String
   mimeType   String
-  storageKey String       @unique
-  isCurrent  Boolean      @default(true)
-  createdAt  DateTime     @default(now()) @db.Timestamptz(3)
-  load       Load         @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  storageKey String              @unique
+  isCurrent  Boolean             @default(true)
+  createdAt  DateTime            @default(now()) @db.Timestamptz(3)
+  load       Load                @relation(fields: [loadId], references: [id], onDelete: Cascade)
+  extraction DocumentExtraction?
 
   @@unique([loadId, kind, version])
+}
+
+model DocumentExtraction {
+  id          String           @id @default(uuid()) @db.Uuid
+  documentId  String           @unique @db.Uuid
+  status      ExtractionStatus @default(PENDING)
+  provider    String
+  model       String?
+  result      Json?
+  error       String?
+  startedAt   DateTime?        @db.Timestamptz(3)
+  completedAt DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime         @updatedAt @db.Timestamptz(3)
+  document    LoadDocument     @relation(fields: [documentId], references: [id], onDelete: Cascade)
 }
 
 model LoadFieldVisibility {

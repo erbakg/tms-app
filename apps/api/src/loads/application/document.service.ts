@@ -2,6 +2,8 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 
 import { OBJECT_STORAGE, type ObjectStorage } from '../../storage/object-storage.js';
+import { ExtractionService } from '../../ai/extraction.service.js';
+import type { DocumentExtraction } from '../../ai/extraction.js';
 import type { LoadRepository } from './load.service.js';
 import { LOAD_REPOSITORY } from './load.service.js';
 import { DocumentKind, type LoadDocument } from '../domain/load-document.js';
@@ -28,6 +30,7 @@ export class DocumentService {
     @Inject(LOAD_REPOSITORY) private readonly loadRepository: LoadRepository,
     @Inject(DOCUMENT_REPOSITORY) private readonly documentRepository: DocumentRepository,
     @Inject(OBJECT_STORAGE) private readonly objectStorage: ObjectStorage,
+    @Inject(ExtractionService) private readonly extractionService: ExtractionService,
   ) {}
 
   async uploadRateConfirmation(
@@ -44,13 +47,16 @@ export class DocumentService {
     });
 
     try {
-      return await this.documentRepository.createNextRateConfirmation({
+      const document = await this.documentRepository.createNextRateConfirmation({
         loadId,
         kind: DocumentKind.RATE_CONFIRMATION,
         filename: input.filename,
         mimeType: input.mimeType,
         storageKey,
       });
+      await this.extractionService.schedule(document.id);
+
+      return document;
     } catch (error) {
       await this.objectStorage.deleteObject(storageKey);
       throw error;
@@ -69,6 +75,16 @@ export class DocumentService {
     }
 
     return this.objectStorage.createDownloadUrl(document.storageKey);
+  }
+
+  async getExtraction(loadId: string, documentId: string): Promise<DocumentExtraction> {
+    const document = await this.documentRepository.findByLoadIdAndId(loadId, documentId);
+
+    if (document === null) {
+      throw new NotFoundException({ code: 'DOCUMENT_NOT_FOUND' });
+    }
+
+    return this.extractionService.findByDocumentId(document.id);
   }
 
   private async assertLoadExists(loadId: string): Promise<void> {
