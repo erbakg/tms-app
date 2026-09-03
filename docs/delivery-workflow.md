@@ -1,11 +1,11 @@
-# Delivery workflow
+# Процесс поставки
 
-Every behavior change follows red → green → refactor:
+Каждое изменение поведения следует циклу red → green → refactor:
 
-1. Add a failing unit, integration, or e2e test describing the behavior.
-2. Implement the smallest change that passes it.
-3. Refactor while the complete suite remains green.
+1. Добавить падающий unit-, integration- или e2e-тест, описывающий требуемое поведение.
+2. Реализовать минимальное изменение, при котором тест проходит.
+3. Рефакторить, пока полный набор тестов остаётся зелёным.
 
-GitHub Actions runs unit coverage, PostgreSQL integration tests, e2e tests, ESLint, Prettier verification, TypeScript type-checking, and the production build for pull requests and pushes to `main`.
+GitHub Actions запускает coverage unit-тестов, integration-тесты PostgreSQL, e2e-тесты, ESLint, проверку Prettier, проверку типов TypeScript и production build для pull request и push в `main`.
 
-Use focused branches such as `feat/persist-load-drafts` and use conventional commit subjects, for example `feat(api): persist load drafts`.
+Используйте узконаправленные ветки, например `feat/persist-load-drafts`, и conventional commit subjects, например `feat(api): persist load drafts`.

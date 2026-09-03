@@ -1,16 +1,16 @@
-# Architecture
+# Архитектура
 
-The repository is a TypeScript monorepo. The API is NestJS with Fastify; future dispatcher administration and driver mobile applications live in separate `apps/` directories and consume its public API.
+Репозиторий представляет собой TypeScript-монорепозиторий. API построен на NestJS и Fastify; будущие админ-панель диспетчера и мобильное приложение водителя будут находиться в отдельных директориях `apps/` и использовать его публичный API.
 
-## API boundaries
+## Границы API
 
-- **HTTP controllers** validate input and expose transport-level contracts.
-- **Application services** implement use cases.
-- **Infrastructure repositories** persist domain entities through Prisma.
-- **Domain types** are independent from NestJS and Prisma where practical.
+- **HTTP controllers** валидируют входные данные и предоставляют транспортные контракты.
+- **Application services** реализуют сценарии использования.
+- **Infrastructure repositories** сохраняют доменные сущности через Prisma.
+- **Domain types** по возможности не зависят от NestJS и Prisma.
 
-PostgreSQL is the source of truth for operational data. Redis is reserved for background jobs such as Rate Confirmation OCR/AI extraction. Original RC files will be stored in object storage, not in Git or the database.
+PostgreSQL — источник истины для операционных данных. Redis зарезервирован для фоновых задач, например OCR/AI-извлечения данных из Rate Confirmation. Оригинальные файлы RC будут храниться в object storage, а не в Git или базе данных.
 
-## Driver-data boundary
+## Граница данных водителя
 
-Financial and internal dispatcher data must never be returned from driver-facing endpoints. `LoadFieldVisibility` is the initial persistence mechanism for field-level driver visibility; a dedicated driver projection endpoint will enforce it.
+Финансовые и внутренние данные диспетчера никогда не должны возвращаться из endpoints для водителя. `LoadFieldVisibility` — начальный механизм хранения настройки видимости отдельных полей; соблюдение этого правила обеспечит отдельный endpoint-проекция для приложения водителя.

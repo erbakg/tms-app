@@ -1,12 +1,12 @@
-# API contract — current implementation
+# Контракт API — текущая реализация
 
-The API is not versioned yet; versioning and authentication will be introduced before mobile or external clients are connected.
+API пока не версионируется. Версионирование и аутентификация будут добавлены до подключения мобильного или внешнего клиента.
 
-## Load drafts
+## Черновики Load
 
 ### `POST /loads`
 
-Creates a persisted `DRAFT` Load. `brokerLoadNumber` is optional.
+Создаёт сохраняемый в БД `DRAFT` Load. Поле `brokerLoadNumber` необязательно.
 
 ```json
 { "brokerLoadNumber": "784521" }
@@ -14,13 +14,13 @@ Creates a persisted `DRAFT` Load. `brokerLoadNumber` is optional.
 
 ### `GET /loads/:loadId`
 
-Returns the draft with stops ordered by `position`. A missing Load returns HTTP 404 with code `LOAD_NOT_FOUND`.
+Возвращает черновик со stops, отсортированными по `position`. Если Load не найден, API возвращает HTTP 404 с кодом `LOAD_NOT_FOUND`.
 
 ## Stops
 
 ### `POST /loads/:loadId/stops`
 
-Adds one stop at the end of the route. `type` must be `PICKUP` or `DELIVERY`; all location, appointment, reference, and instruction fields are optional while the dispatcher is preparing the draft.
+Добавляет stop в конец маршрута. `type` должен быть равен `PICKUP` или `DELIVERY`; пока диспетчер заполняет черновик, все поля адреса, appointment, reference и instructions необязательны.
 
 ```json
 {
@@ -34,15 +34,15 @@ Adds one stop at the end of the route. `type` must be `PICKUP` or `DELIVERY`; al
 }
 ```
 
-Invalid data returns HTTP 400 with code `INVALID_STOP`; a missing Load returns HTTP 404 with code `LOAD_NOT_FOUND`.
+При невалидных данных API возвращает HTTP 400 с кодом `INVALID_STOP`; при отсутствии Load — HTTP 404 с кодом `LOAD_NOT_FOUND`.
 
 ### `PATCH /loads/:loadId/stops/:stopId`
 
-Updates one or more stop fields. The stop must belong to the specified Load. A missing stop returns `STOP_NOT_FOUND`.
+Обновляет одно или несколько полей stop. Stop должен принадлежать указанному Load. Если stop не найден, возвращается код `STOP_NOT_FOUND`.
 
 ### `PATCH /loads/:loadId/stops/reorder`
 
-Replaces the complete route order. Submit each current stop ID exactly once; the API returns stops ordered from position `1`. The operation is transactional, so clients never observe a partially reordered route.
+Полностью заменяет порядок маршрута. Необходимо передать идентификатор каждого текущего stop ровно один раз; API возвращает stops с позициями, начиная с `1`. Операция выполняется в транзакции, поэтому клиент никогда не увидит частично изменённый маршрут.
 
 ```json
 { "stopIds": ["delivery-stop-uuid", "pickup-stop-uuid"] }
@@ -50,4 +50,4 @@ Replaces the complete route order. Submit each current stop ID exactly once; the
 
 ### `DELETE /loads/:loadId/stops/:stopId`
 
-Removes the specified stop and returns HTTP 204. Route positions stay stable until a later reorder request.
+Удаляет указанный stop и возвращает HTTP 204. Позиции остальных stops не меняются до следующего запроса reorder.

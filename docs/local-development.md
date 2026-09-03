@@ -1,14 +1,14 @@
-# Local development
+# Локальная разработка
 
-## Prerequisites
+## Требования
 
 - Node.js 22
 - pnpm 10.24.0
 - Docker Desktop
 
-## First run
+## Первый запуск
 
-From the repository root:
+Из корня репозитория:
 
 ```bash
 pnpm install
@@ -19,13 +19,13 @@ pnpm --filter @312kg/api prisma migrate dev
 pnpm --filter @312kg/api start:dev
 ```
 
-The API listens on `http://localhost:3000`; its health endpoint is `GET /health`.
+API слушает `http://localhost:3000`; endpoint проверки состояния — `GET /health`.
 
-Docker exposes PostgreSQL at `localhost:5433` and Redis at `localhost:6380`, avoiding common local defaults. Local development credentials exist only for the containers in `compose.yaml`; production credentials are supplied by deployment secrets.
+Docker открывает PostgreSQL на `localhost:5433` и Redis на `localhost:6380`, чтобы не занимать стандартные локальные порты. Учётные данные для локальной разработки существуют только для контейнеров из `compose.yaml`; production-данные передаются через секреты среды развёртывания.
 
-## Verification
+## Проверка
 
-Start Docker services before integration or e2e tests that use PostgreSQL:
+Перед integration- или e2e-тестами, использующими PostgreSQL, запустите Docker-сервисы:
 
 ```bash
 pnpm test:coverage
@@ -37,7 +37,7 @@ pnpm typecheck
 pnpm build
 ```
 
-To stop containers while preserving local database data:
+Чтобы остановить контейнеры и сохранить локальные данные базы:
 
 ```bash
 docker compose down

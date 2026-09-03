@@ -1,15 +1,15 @@
-# Initial data model
+# Начальная модель данных
 
-## Load lifecycle
+## Жизненный цикл Load
 
-`Load.status` starts as `DRAFT`. The dispatcher may revise all extracted Rate Confirmation data while it is a draft. Confirmation will allocate a unique internal `312KG` ID in a later use case; it is intentionally `null` for drafts.
+`Load.status` начинается со значения `DRAFT`. Пока Load остаётся черновиком, диспетчер может исправлять все данные, извлечённые из Rate Confirmation. При подтверждении в следующем сценарии будет назначен уникальный внутренний `312KG` ID; для черновика он намеренно остаётся `null`.
 
-## Entities
+## Сущности
 
-- **User** — future Dispatcher, Driver, Admin, Accounting, and Safety identities.
-- **Load** — the aggregate root, broker load number, lifecycle, internal identifier, and assigned driver.
-- **Stop** — ordered pickup or delivery stop. A unique `(loadId, position)` prevents ambiguous route order.
-- **LoadDocument** — object-storage metadata and immutable document version history. It does not contain file bytes.
-- **LoadFieldVisibility** — per-load, per-field driver visibility settings. Its default is private.
+- **User** — будущие учётные записи Dispatcher, Driver, Admin, Accounting и Safety.
+- **Load** — корень агрегата: номер брокера, жизненный цикл, внутренний идентификатор и назначенный водитель.
+- **Stop** — упорядоченная точка pickup или delivery. Уникальная пара `(loadId, position)` предотвращает неоднозначный порядок маршрута.
+- **LoadDocument** — метаданные object storage и неизменяемая история версий документов. Байты файла в сущности не хранятся.
+- **LoadFieldVisibility** — настройка видимости каждого поля водителю для конкретного Load. По умолчанию поле закрыто.
 
-All relationships from a Load use cascade deletion at the database level. Production retention/deletion policy must be established before exposing any destructive operation.
+Все связи с Load используют cascade deletion на уровне базы данных. Политика хранения и удаления production-данных должна быть определена до появления destructive operations.
