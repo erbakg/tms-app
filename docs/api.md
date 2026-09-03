@@ -51,3 +51,17 @@ API пока не версионируется. Версионирование �
 ### `DELETE /loads/:loadId/stops/:stopId`
 
 Удаляет указанный stop и возвращает HTTP 204. Позиции остальных stops не меняются до следующего запроса reorder.
+
+## Документы Rate Confirmation
+
+### `POST /loads/:loadId/documents`
+
+Принимает один файл через `multipart/form-data` с именем поля `file`. Поддерживаются PDF, JPG и PNG, размер файла ограничен 20 MiB. Каждый новый файл создаёт следующую версию `RATE_CONFIRMATION`: предыдущая версия сохраняется, но получает `isCurrent: false`.
+
+### `GET /loads/:loadId/documents`
+
+Возвращает метаданные всех версий документов Load в порядке их версий. Содержимое файлов в ответ не включается.
+
+### `GET /loads/:loadId/documents/:documentId/download`
+
+Возвращает короткоживущую (5 минут) signed URL для скачивания документа. Если документ не принадлежит указанному Load или отсутствует, API возвращает `DOCUMENT_NOT_FOUND`.

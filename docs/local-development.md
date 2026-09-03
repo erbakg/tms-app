@@ -21,7 +21,7 @@ pnpm --filter @312kg/api start:dev
 
 API слушает `http://localhost:3000`; endpoint проверки состояния — `GET /health`.
 
-Docker открывает PostgreSQL на `localhost:5433` и Redis на `localhost:6380`, чтобы не занимать стандартные локальные порты. Учётные данные для локальной разработки существуют только для контейнеров из `compose.yaml`; production-данные передаются через секреты среды развёртывания.
+Docker открывает PostgreSQL на `localhost:5433`, Redis на `localhost:6380` и MinIO на `localhost:9000`; консоль MinIO доступна на `http://localhost:9001`. Учётные данные для локальной разработки существуют только для контейнеров из `compose.yaml`; production-данные передаются через секреты среды развёртывания.
 
 ## Проверка
 
