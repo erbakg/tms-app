@@ -31,6 +31,7 @@ const document: LoadDocument = {
 
 const existingLoadRepository = (): LoadRepository => ({
   create: async (draft) => draft,
+  confirm: async () => (document.loadId === load.id ? load : null),
   findById: async () => load,
 });
 
@@ -98,6 +99,7 @@ describe('DocumentService', () => {
   it('rejects an upload for an unknown load', async () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
+      confirm: async () => null,
       findById: async () => null,
     };
     const service = new DocumentService(

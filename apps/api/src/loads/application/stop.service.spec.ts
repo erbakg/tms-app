@@ -33,6 +33,7 @@ const stop: Stop = {
 
 const existingLoadRepository = (): LoadRepository => ({
   create: async (draft) => draft,
+  confirm: async () => load,
   findById: async () => load,
 });
 
@@ -52,6 +53,7 @@ describe('StopService', () => {
   it('rejects a stop creation for an unknown load', async () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
+      confirm: async () => null,
       findById: async () => null,
     };
     const repository: StopRepository = {
@@ -100,6 +102,7 @@ describe('StopService', () => {
   it('does not edit a stop when its load no longer exists', async () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
+      confirm: async () => null,
       findById: async () => null,
     };
     const repository: StopRepository = {

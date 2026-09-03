@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { LoadStatus, type LoadStatus as LoadStatusValue } from '../domain/load-status.js';
 import type { Stop } from '../domain/stop.js';
@@ -20,6 +20,7 @@ export interface CreateLoadDraftInput {
 export interface LoadRepository {
   create(load: Load): Promise<Load>;
   findById(id: string): Promise<LoadDetails | null>;
+  confirm(id: string): Promise<Load | null>;
 }
 
 export interface LoadDetails extends Load {
@@ -46,5 +47,13 @@ export class LoadService {
 
   findById(id: string): Promise<LoadDetails | null> {
     return this.loadRepository.findById(id);
+  }
+
+  async confirm(id: string): Promise<Load> {
+    const load = await this.loadRepository.confirm(id);
+    if (load === null) {
+      throw new NotFoundException({ code: 'LOAD_NOT_FOUND' });
+    }
+    return load;
   }
 }

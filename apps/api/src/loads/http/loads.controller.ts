@@ -48,4 +48,9 @@ export class LoadsController {
 
     return load;
   }
+
+  @Post(':loadId/confirm')
+  confirm(@Param('loadId') loadId: string): Promise<Load> {
+    return this.loadService.confirm(loadId);
+  }
 }

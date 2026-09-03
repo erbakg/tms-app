@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { NotFoundException } from '@nestjs/common';
 
 import { LoadService, type LoadDetails, type LoadRepository } from './load.service.js';
 
@@ -40,14 +41,35 @@ describe('LoadService', () => {
     const repository: LoadRepository = {
       create: async (load) => load,
       findById: async () => existing,
+      confirm: async () => existing,
     };
     const service = new LoadService(repository);
 
     await expect(service.findById(existing.id)).resolves.toEqual(existing);
+  });
+
+  it('confirms a draft and rejects an unknown load', async () => {
+    const confirmed: LoadDetails = {
+      id: '91e7d340-b142-4ca0-96d8-4f5b41c89887',
+      brokerLoadNumber: null,
+      createdAt: new Date(),
+      internalLoadId: '312KG-10000',
+      status: 'CONFIRMED',
+      stops: [],
+    };
+    const service = new LoadService({ ...createRepository(), confirm: async () => confirmed });
+    await expect(service.confirm(confirmed.id)).resolves.toMatchObject({
+      status: 'CONFIRMED',
+      internalLoadId: '312KG-10000',
+    });
+    await expect(
+      new LoadService({ ...createRepository(), confirm: async () => null }).confirm(confirmed.id),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });
 
 const createRepository = (): LoadRepository => ({
   create: async (load) => load,
   findById: async () => null,
+  confirm: async () => null,
 });

@@ -81,3 +81,7 @@ API пока не версионируется. Все endpoints, кроме `GE
 Возвращает статус и результат extraction. Возможные статусы: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`.
 
 При `COMPLETED` поле `result` содержит поля `brokerName`, `brokerLoadNumber`, `rate`, `commodity`, `weight`, `equipmentType`, `specialInstructions` и массив `stops`. Каждое значение хранится как `{ "value": string | null, "confidence": "HIGH" | "MEDIUM" | "LOW" | "NOT_FOUND" }`; это позволяет интерфейсу выделять сомнительные данные и не выдавать предположение за факт.
+
+### `POST /loads/:loadId/confirm`
+
+Подтверждает черновик. В одной транзакции присваивает неизменяемый внутренний ID формата `312KG-10000` и переводит `status` в `CONFIRMED`. Повторный вызов возвращает уже подтверждённый Load без выдачи нового номера.
