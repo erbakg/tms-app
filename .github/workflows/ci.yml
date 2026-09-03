@@ -64,7 +64,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Generate Prisma Client
-        run: pnpm --filter @312kg/api prisma generate
+        run: pnpm --filter @312kg/api exec prisma generate --schema prisma/schema.prisma
 
       - name: Apply database migrations
         run: pnpm --filter @312kg/api prisma migrate deploy
