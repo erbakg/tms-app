@@ -13,7 +13,7 @@ export class LoadsController {
   constructor(@Inject(LoadService) private readonly loadService: LoadService) {}
 
   @Post()
-  createDraft(@Body() body: unknown): Load {
+  createDraft(@Body() body: unknown): Promise<Load> {
     const parsed = createLoadDraftSchema.safeParse(body);
 
     if (!parsed.success) {

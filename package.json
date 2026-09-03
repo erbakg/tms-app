@@ -13,6 +13,7 @@
     "format:check": "prettier --check .",
     "test": "pnpm --filter @312kg/api test",
     "test:coverage": "pnpm --filter @312kg/api test:coverage",
+    "test:integration": "pnpm --filter @312kg/api test:integration",
     "test:watch": "pnpm --filter @312kg/api test:watch",
     "test:e2e": "pnpm --filter @312kg/api test:e2e",
     "typecheck": "pnpm --filter @312kg/api typecheck"

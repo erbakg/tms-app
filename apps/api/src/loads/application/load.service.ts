@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 
 import { LoadStatus, type LoadStatus as LoadStatusValue } from '../domain/load-status.js';
 
@@ -16,15 +16,25 @@ export interface CreateLoadDraftInput {
   brokerLoadNumber?: string;
 }
 
+export interface LoadRepository {
+  create(load: Load): Promise<Load>;
+}
+
+export const LOAD_REPOSITORY = Symbol('LOAD_REPOSITORY');
+
 @Injectable()
 export class LoadService {
-  createDraft(input: CreateLoadDraftInput): Load {
-    return {
+  constructor(@Inject(LOAD_REPOSITORY) private readonly loadRepository: LoadRepository) {}
+
+  async createDraft(input: CreateLoadDraftInput): Promise<Load> {
+    const draft: Load = {
       id: randomUUID(),
       brokerLoadNumber: input.brokerLoadNumber ?? null,
       createdAt: new Date(),
       internalLoadId: null,
       status: LoadStatus.DRAFT,
     };
+
+    return this.loadRepository.create(draft);
   }
 }

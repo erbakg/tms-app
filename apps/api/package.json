@@ -8,6 +8,7 @@
     "start:dev": "tsx watch src/main.ts",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
     "test:e2e": "vitest run --config vitest.e2e.config.ts",
     "typecheck": "tsc --noEmit"
@@ -16,6 +17,8 @@
     "@nestjs/common": "^11.1.11",
     "@nestjs/core": "^11.1.11",
     "@nestjs/platform-fastify": "^11.1.11",
+    "@prisma/client": "^6.19.3",
+    "dotenv": "^16.6.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.2",
     "zod": "^4.1.13"
@@ -24,6 +27,7 @@
     "@nestjs/testing": "^11.1.11",
     "@types/node": "^24.10.1",
     "@vitest/coverage-v8": "^4.1.11",
+    "prisma": "^6.19.3",
     "tsx": "^4.20.6",
     "vitest": "^4.0.15"
   }

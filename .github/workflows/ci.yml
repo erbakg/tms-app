@@ -13,6 +13,22 @@ jobs:
   verify:
     name: Verify API
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: 312kg_tms
+          POSTGRES_USER: 312kg
+          POSTGRES_PASSWORD: 312kg_local_only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U 312kg -d 312kg_tms"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://312kg:312kg_local_only@localhost:5432/312kg_tms?schema=public
     steps:
       - name: Check out source
         uses: actions/checkout@v4
@@ -31,8 +47,17 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate Prisma Client
+        run: pnpm --filter @312kg/api prisma generate
+
+      - name: Apply database migrations
+        run: pnpm --filter @312kg/api prisma migrate deploy
+
       - name: Run unit tests with coverage
         run: pnpm test:coverage
+
+      - name: Run integration tests
+        run: pnpm test:integration
 
       - name: Run end-to-end tests
         run: pnpm test:e2e
