@@ -18,9 +18,19 @@ API пока не версионируется. Все endpoints, кроме `GE
 { "brokerLoadNumber": "784521" }
 ```
 
+### `POST /loads/rate-confirmations`
+
+Единый intake endpoint для первого шага процесса: принимает тот же `multipart/form-data` файл `file` (PDF/JPG/PNG до 20 MiB), создаёт `DRAFT` Load, прикрепляет к нему RC версии 1 и ставит extraction в очередь. Необязательное текстовое поле multipart `brokerLoadNumber` предварительно заполняет номер брокера. Это основной путь для сценария «загрузить RC → получить черновик для review».
+
 ### `GET /loads/:loadId`
 
 Возвращает черновик со stops, отсортированными по `position`. Если Load не найден, API возвращает HTTP 404 с кодом `LOAD_NOT_FOUND`.
+
+### `PATCH /loads/:loadId`
+
+Сохраняет результаты обязательного ревью диспетчера. Передаются только поля, которые нужно изменить; значение `null` очищает поле. Поддерживаются номер и реквизиты брокера, ставка, груз, вес, pieces, equipment, temperature, special instructions, detention/layover/TONU/lumper, tracking/POD, billing/factoring/required documents и `internalComments`.
+
+AI не вызывает этот endpoint самостоятельно: диспетчер сначала видит `confidence`, исправляет результат и только затем явно сохраняет выбранные значения.
 
 ## Stops
 
@@ -80,8 +90,36 @@ API пока не версионируется. Все endpoints, кроме `GE
 
 Возвращает статус и результат extraction. Возможные статусы: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`.
 
-При `COMPLETED` поле `result` содержит поля `brokerName`, `brokerLoadNumber`, `rate`, `commodity`, `weight`, `equipmentType`, `specialInstructions` и массив `stops`. Каждое значение хранится как `{ "value": string | null, "confidence": "HIGH" | "MEDIUM" | "LOW" | "NOT_FOUND" }`; это позволяет интерфейсу выделять сомнительные данные и не выдавать предположение за факт.
+При `COMPLETED` поле `result` содержит broker contacts, broker load number, rate, cargo/equipment/temperature, commercial terms, billing/factoring requirements, notes и массив `stops`. Каждое значение хранится как `{ "value": string | null, "confidence": "HIGH" | "MEDIUM" | "LOW" | "NOT_FOUND" }`; это позволяет интерфейсу выделять сомнительные данные и не выдавать предположение за факт.
+
+### `POST /loads/:loadId/documents/:documentId/extraction/apply-stops`
+
+Явно создаёт маршрут из `stops` уже завершённого AI extraction. Это действие выполняет диспетчер после проверки; API не применяет stops при загрузке автоматически. Разрешено только для `DRAFT` без существующих stops. Создание всех stops выполняется в одной транзакции, поэтому частичный маршрут не появится.
 
 ### `POST /loads/:loadId/confirm`
 
 Подтверждает черновик. В одной транзакции присваивает неизменяемый внутренний ID формата `312KG-10000` и переводит `status` в `CONFIRMED`. Повторный вызов возвращает уже подтверждённый Load без выдачи нового номера.
+
+## Пользователи и водитель
+
+### `POST /users`
+
+Только `ADMIN`. Создаёт учётную запись, в том числе `DRIVER`; пароль должен иметь не менее 12 символов. Это позволяет назначать реального водителя и проверять мобильный API без обхода аутентификации.
+
+### `POST /loads/:loadId/assign-driver`
+
+Назначает пользователя с ролью `DRIVER` на подтверждённый Load. Для черновика API возвращает `LOAD_NOT_CONFIRMED`; несуществующий пользователь или пользователь другой роли даёт `DRIVER_NOT_FOUND`.
+
+### `PATCH /loads/:loadId/field-visibility`
+
+Управляет одним полем, доступным водителю:
+
+```json
+{ "field": "specialInstructions", "visibleToDriver": true }
+```
+
+Разрешены только операционные поля: broker load number/name, commodity, weight/pieces, equipment, temperature, instructions, tracking, POD и required documents. Финансовые и внутренние поля (`rate`, billing, factoring, comments и условия оплаты) нельзя открыть этим endpoint.
+
+### `GET /driver/loads`
+
+Только `DRIVER`. Возвращает только подтверждённые Load, назначенные пользователю из JWT. В ответе всегда есть внутренний ID, статус и stops; остальные поля выдаются исключительно после их включения диспетчером. Финансовые и internal fields в этом ответе отсутствуют независимо от настроек.

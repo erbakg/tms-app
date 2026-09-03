@@ -13,14 +13,31 @@ const fieldSchema = z.object({
   confidence: z.enum(ExtractionConfidence),
 });
 
-const extractionSchema = z.object({
+export const rateConfirmationExtractionSchema = z.object({
   brokerName: fieldSchema,
+  brokerContactName: fieldSchema,
+  brokerContactPhone: fieldSchema,
+  brokerContactEmail: fieldSchema,
   brokerLoadNumber: fieldSchema,
   rate: fieldSchema,
   commodity: fieldSchema,
   weight: fieldSchema,
+  pieces: fieldSchema,
   equipmentType: fieldSchema,
+  temperatureRequirements: fieldSchema,
   specialInstructions: fieldSchema,
+  detentionTerms: fieldSchema,
+  layoverTerms: fieldSchema,
+  tonuTerms: fieldSchema,
+  lumperInstructions: fieldSchema,
+  trackingRequirements: fieldSchema,
+  podRequirements: fieldSchema,
+  invoicingInstructions: fieldSchema,
+  billingEmail: fieldSchema,
+  billingAddress: fieldSchema,
+  factoringInformation: fieldSchema,
+  requiredDocuments: fieldSchema,
+  notes: fieldSchema,
   stops: z.array(
     z.object({
       type: z.enum(['PICKUP', 'DELIVERY']),
@@ -48,22 +65,56 @@ const responseSchema = {
   additionalProperties: false,
   required: [
     'brokerName',
+    'brokerContactName',
+    'brokerContactPhone',
+    'brokerContactEmail',
     'brokerLoadNumber',
     'rate',
     'commodity',
     'weight',
+    'pieces',
     'equipmentType',
+    'temperatureRequirements',
     'specialInstructions',
+    'detentionTerms',
+    'layoverTerms',
+    'tonuTerms',
+    'lumperInstructions',
+    'trackingRequirements',
+    'podRequirements',
+    'invoicingInstructions',
+    'billingEmail',
+    'billingAddress',
+    'factoringInformation',
+    'requiredDocuments',
+    'notes',
     'stops',
   ],
   properties: {
     brokerName: fieldJsonSchema,
+    brokerContactName: fieldJsonSchema,
+    brokerContactPhone: fieldJsonSchema,
+    brokerContactEmail: fieldJsonSchema,
     brokerLoadNumber: fieldJsonSchema,
     rate: fieldJsonSchema,
     commodity: fieldJsonSchema,
     weight: fieldJsonSchema,
+    pieces: fieldJsonSchema,
     equipmentType: fieldJsonSchema,
+    temperatureRequirements: fieldJsonSchema,
     specialInstructions: fieldJsonSchema,
+    detentionTerms: fieldJsonSchema,
+    layoverTerms: fieldJsonSchema,
+    tonuTerms: fieldJsonSchema,
+    lumperInstructions: fieldJsonSchema,
+    trackingRequirements: fieldJsonSchema,
+    podRequirements: fieldJsonSchema,
+    invoicingInstructions: fieldJsonSchema,
+    billingEmail: fieldJsonSchema,
+    billingAddress: fieldJsonSchema,
+    factoringInformation: fieldJsonSchema,
+    requiredDocuments: fieldJsonSchema,
+    notes: fieldJsonSchema,
     stops: {
       type: 'array',
       items: {
@@ -90,7 +141,7 @@ const responseSchema = {
   },
 } as const;
 
-const prompt = `Extract the rate confirmation into the requested JSON schema. Do not infer values that are absent from the document. Use NOT_FOUND with null for missing values; HIGH only for explicitly stated values, MEDIUM for a clear but partially ambiguous value, and LOW for uncertain OCR. Preserve relevant units and currency in the value text. Classify every facility as PICKUP or DELIVERY.`;
+const prompt = `Extract the rate confirmation into the requested JSON schema. Do not infer values that are absent from the document. Use NOT_FOUND with null for missing values; HIGH only for explicitly stated values, MEDIUM for a clear but partially ambiguous value, and LOW for uncertain OCR. Preserve relevant units and currency in the value text. Extract broker contacts, financial terms, all operating requirements, billing/factoring details, and all pickup/delivery facilities. Classify every facility as PICKUP or DELIVERY.`;
 
 @Injectable()
 export class GeminiRateConfirmationAiProvider implements RateConfirmationAiProvider {
@@ -136,7 +187,7 @@ export class GeminiRateConfirmationAiProvider implements RateConfirmationAiProvi
     const payload: unknown = await response.json();
     const outputText = this.readOutputText(payload);
 
-    return extractionSchema.parse(JSON.parse(outputText));
+    return rateConfirmationExtractionSchema.parse(JSON.parse(outputText));
   }
 
   private readOutputText(payload: unknown): string {

@@ -54,6 +54,29 @@ model Load {
   sequenceNumber   Int?                  @unique
   internalLoadId   String?               @unique
   brokerLoadNumber String?
+  brokerName       String?
+  brokerContactName String?
+  brokerContactPhone String?
+  brokerContactEmail String?
+  rate             String?
+  commodity        String?
+  weight           String?
+  pieces           String?
+  equipmentType    String?
+  temperatureRequirements String?
+  specialInstructions String?
+  detentionTerms   String?
+  layoverTerms     String?
+  tonuTerms        String?
+  lumperInstructions String?
+  trackingRequirements String?
+  podRequirements  String?
+  invoicingInstructions String?
+  billingEmail     String?
+  billingAddress   String?
+  factoringInformation String?
+  requiredDocuments String?
+  internalComments String?
   status           LoadStatus            @default(DRAFT)
   assignedDriverId String?               @db.Uuid
   createdAt        DateTime              @default(now()) @db.Timestamptz(3)

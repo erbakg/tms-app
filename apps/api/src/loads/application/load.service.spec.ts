@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, NotFoundException } from '@nestjs/common';
 
 import { LoadService, type LoadDetails, type LoadRepository } from './load.service.js';
 
@@ -42,7 +42,10 @@ describe('LoadService', () => {
       create: async (load) => load,
       findById: async () => existing,
       confirm: async () => existing,
-      updateBrokerLoadNumber: async () => existing,
+      update: async () => existing,
+      assignDriver: async () => existing,
+      setDriverFieldVisibility: async () => undefined,
+      findAssignedToDriver: async () => [],
     };
     const service = new LoadService(repository);
 
@@ -67,11 +70,40 @@ describe('LoadService', () => {
       new LoadService({ ...createRepository(), confirm: async () => null }).confirm(confirmed.id),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
+
+  it('assigns only a confirmed load to a driver', async () => {
+    const confirmed: LoadDetails = {
+      id: '91e7d340-b142-4ca0-96d8-4f5b41c89887',
+      brokerLoadNumber: null,
+      createdAt: new Date(),
+      internalLoadId: '312KG-10001',
+      status: 'CONFIRMED',
+      stops: [],
+    };
+    const service = new LoadService({
+      ...createRepository(),
+      findById: async () => confirmed,
+      assignDriver: async () => confirmed,
+    });
+    await expect(
+      service.assignDriver(confirmed.id, 'ed081ab1-77a8-4866-bf3a-aa6ce51ad757'),
+    ).resolves.toEqual(confirmed);
+
+    await expect(
+      new LoadService({
+        ...createRepository(),
+        findById: async () => ({ ...confirmed, status: 'DRAFT' }),
+      }).assignDriver(confirmed.id, 'ed081ab1-77a8-4866-bf3a-aa6ce51ad757'),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
 });
 
 const createRepository = (): LoadRepository => ({
   create: async (load) => load,
   findById: async () => null,
   confirm: async () => null,
-  updateBrokerLoadNumber: async () => null,
+  update: async () => null,
+  assignDriver: async () => null,
+  setDriverFieldVisibility: async () => undefined,
+  findAssignedToDriver: async () => [],
 });

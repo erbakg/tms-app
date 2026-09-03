@@ -1,8 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { PrismaClient } from '@prisma/client';
+import { UserRole, type PrismaClient } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma.service.js';
-import type { Load, LoadDetails, LoadRepository } from '../application/load.service.js';
+import type {
+  Load,
+  LoadDetails,
+  LoadRepository,
+  DriverLoad,
+  DriverVisibleField,
+  UpdateLoadInput,
+} from '../application/load.service.js';
 import type { Stop } from '../domain/stop.js';
 
 @Injectable()
@@ -66,30 +73,97 @@ export class PrismaLoadRepository implements LoadRepository {
     });
   }
 
-  async updateBrokerLoadNumber(id: string, brokerLoadNumber: string | null): Promise<Load | null> {
+  async update(id: string, input: UpdateLoadInput): Promise<Load | null> {
     try {
-      return this.toLoad(
-        await this.prisma.load.update({ where: { id }, data: { brokerLoadNumber } }),
-      );
+      return this.toLoad(await this.prisma.load.update({ where: { id }, data: input }));
     } catch {
       return null;
     }
   }
 
-  private toLoad(stored: {
-    id: string;
-    brokerLoadNumber: string | null;
-    createdAt: Date;
-    internalLoadId: string | null;
-    sequenceNumber?: number | null;
-    status: Load['status'];
-  }): Load {
+  async assignDriver(id: string, driverId: string): Promise<Load | 'DRIVER_NOT_FOUND' | null> {
+    return this.prisma.$transaction(async (transaction) => {
+      const driver = await transaction.user.findUnique({ where: { id: driverId } });
+      if (driver === null || driver.role !== UserRole.DRIVER) return 'DRIVER_NOT_FOUND';
+      const load = await transaction.load.findUnique({ where: { id } });
+      if (load === null) return null;
+      return this.toLoad(
+        await transaction.load.update({ where: { id }, data: { assignedDriverId: driverId } }),
+      );
+    });
+  }
+
+  async setDriverFieldVisibility(
+    loadId: string,
+    field: DriverVisibleField,
+    visibleToDriver: boolean,
+  ): Promise<void> {
+    await this.prisma.loadFieldVisibility.upsert({
+      where: { loadId_field: { loadId, field } },
+      create: { loadId, field, visibleToDriver },
+      update: { visibleToDriver },
+    });
+  }
+
+  async findAssignedToDriver(driverId: string): Promise<DriverLoad[]> {
+    const loads = await this.prisma.load.findMany({
+      where: { assignedDriverId: driverId, status: 'CONFIRMED' },
+      include: {
+        stops: { orderBy: { position: 'asc' } },
+        fieldVisibility: { where: { visibleToDriver: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return loads.map((load) => ({
+      ...this.toLoad(load),
+      stops: load.stops.map((stop) => this.toStop(stop)),
+      fieldVisibility: load.fieldVisibility.map((item) => ({
+        field: item.field as DriverVisibleField,
+        visibleToDriver: item.visibleToDriver,
+      })),
+    }));
+  }
+
+  private toLoad(
+    stored: {
+      id: string;
+      brokerLoadNumber: string | null;
+      createdAt: Date;
+      internalLoadId: string | null;
+      sequenceNumber?: number | null;
+      status: Load['status'];
+    } & Omit<Load, 'id' | 'brokerLoadNumber' | 'createdAt' | 'internalLoadId' | 'status'>,
+  ): Load {
     return {
       id: stored.id,
       brokerLoadNumber: stored.brokerLoadNumber,
       createdAt: stored.createdAt,
       internalLoadId: stored.internalLoadId,
       status: stored.status,
+      brokerName: stored.brokerName,
+      brokerContactName: stored.brokerContactName,
+      brokerContactPhone: stored.brokerContactPhone,
+      brokerContactEmail: stored.brokerContactEmail,
+      rate: stored.rate,
+      commodity: stored.commodity,
+      weight: stored.weight,
+      pieces: stored.pieces,
+      equipmentType: stored.equipmentType,
+      temperatureRequirements: stored.temperatureRequirements,
+      specialInstructions: stored.specialInstructions,
+      detentionTerms: stored.detentionTerms,
+      layoverTerms: stored.layoverTerms,
+      tonuTerms: stored.tonuTerms,
+      lumperInstructions: stored.lumperInstructions,
+      trackingRequirements: stored.trackingRequirements,
+      podRequirements: stored.podRequirements,
+      invoicingInstructions: stored.invoicingInstructions,
+      billingEmail: stored.billingEmail,
+      billingAddress: stored.billingAddress,
+      factoringInformation: stored.factoringInformation,
+      requiredDocuments: stored.requiredDocuments,
+      internalComments: stored.internalComments,
     };
   }
 

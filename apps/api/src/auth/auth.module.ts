@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 
 import { DatabaseModule } from '../database/database.module.js';
 import { AuthController } from './auth.controller.js';
+import { UsersController } from './users.controller.js';
 import { JwtAuthGuard, RolesGuard } from './auth.guards.js';
 import { AUTH_USER_REPOSITORY, AuthService } from './auth.service.js';
 import { JwtService } from './jwt.service.js';
@@ -12,7 +13,7 @@ import { PrismaAuthUserRepository } from './prisma-auth-user.repository.js';
 @Global()
 @Module({
   imports: [DatabaseModule],
-  controllers: [AuthController],
+  controllers: [AuthController, UsersController],
   providers: [
     AuthService,
     JwtService,

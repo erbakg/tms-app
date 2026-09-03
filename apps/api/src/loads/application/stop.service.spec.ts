@@ -1,4 +1,4 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { describe, expect, it } from 'vitest';
 
 import type { LoadDetails, LoadRepository } from './load.service.js';
@@ -34,7 +34,10 @@ const stop: Stop = {
 const existingLoadRepository = (): LoadRepository => ({
   create: async (draft) => draft,
   confirm: async () => load,
-  updateBrokerLoadNumber: async () => load,
+  update: async () => load,
+  assignDriver: async () => load,
+  setDriverFieldVisibility: async () => undefined,
+  findAssignedToDriver: async () => [],
   findById: async () => load,
 });
 
@@ -42,6 +45,7 @@ describe('StopService', () => {
   it('creates a stop when the load exists', async () => {
     const repository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => stop,
       delete: async () => true,
       reorder: async () => [stop],
@@ -55,11 +59,15 @@ describe('StopService', () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
       confirm: async () => null,
-      updateBrokerLoadNumber: async () => null,
+      update: async () => null,
+      assignDriver: async () => null,
+      setDriverFieldVisibility: async () => undefined,
+      findAssignedToDriver: async () => [],
       findById: async () => null,
     };
     const repository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => stop,
       delete: async () => true,
       reorder: async () => [stop],
@@ -74,6 +82,7 @@ describe('StopService', () => {
   it('returns not found when an update or deletion targets another stop', async () => {
     const repository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => null,
       delete: async () => false,
       reorder: async () => [stop],
@@ -89,6 +98,7 @@ describe('StopService', () => {
   it('updates and deletes a stop that belongs to the load', async () => {
     const repository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => ({ ...stop, city: 'Dallas' }),
       delete: async () => true,
       reorder: async () => [stop],
@@ -105,11 +115,15 @@ describe('StopService', () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
       confirm: async () => null,
-      updateBrokerLoadNumber: async () => null,
+      update: async () => null,
+      assignDriver: async () => null,
+      setDriverFieldVisibility: async () => undefined,
+      findAssignedToDriver: async () => [],
       findById: async () => null,
     };
     const repository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => stop,
       delete: async () => true,
       reorder: async () => [stop],
@@ -123,6 +137,7 @@ describe('StopService', () => {
   it('accepts a complete reordered route and rejects an incomplete one', async () => {
     const validRepository: StopRepository = {
       create: async () => stop,
+      createMany: async () => [stop],
       update: async () => stop,
       delete: async () => true,
       reorder: async () => [stop],
@@ -138,5 +153,56 @@ describe('StopService', () => {
     await expect(
       new StopService(existingLoadRepository(), invalidRepository).reorder(load.id, [stop.id]),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('creates extracted stops as one reviewed route only for an empty draft', async () => {
+    const extractedStops = [
+      { type: 'PICKUP' as const, facilityName: 'Origin', addressLine1: '1 Main St' },
+      { type: 'DELIVERY' as const, facilityName: 'Destination', addressLine1: '2 Main St' },
+    ];
+    const repository: StopRepository = {
+      create: async () => stop,
+      createMany: async (_loadId, inputs) =>
+        inputs.map((input, index) => ({
+          ...stop,
+          ...input,
+          id: `stop-${index}`,
+          position: index + 1,
+        })),
+      update: async () => stop,
+      delete: async () => true,
+      reorder: async () => [stop],
+    };
+    const service = new StopService(existingLoadRepository(), repository);
+
+    await expect(service.createFromExtraction(load.id, extractedStops)).resolves.toMatchObject([
+      { type: 'PICKUP', position: 1 },
+      { type: 'DELIVERY', position: 2 },
+    ]);
+  });
+
+  it('does not apply extracted stops to a reviewed route or a confirmed load', async () => {
+    const repository: StopRepository = {
+      create: async () => stop,
+      createMany: async () => [stop],
+      update: async () => stop,
+      delete: async () => true,
+      reorder: async () => [stop],
+    };
+    const populated: LoadDetails = { ...load, stops: [stop] };
+    const confirmed: LoadDetails = { ...load, status: 'CONFIRMED' };
+
+    await expect(
+      new StopService(
+        { ...existingLoadRepository(), findById: async () => populated },
+        repository,
+      ).createFromExtraction(load.id, [{ type: 'PICKUP' }]),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(
+      new StopService(
+        { ...existingLoadRepository(), findById: async () => confirmed },
+        repository,
+      ).createFromExtraction(load.id, [{ type: 'PICKUP' }]),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

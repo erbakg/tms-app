@@ -9,3 +9,5 @@
 GitHub Actions запускает coverage unit-тестов, integration-тесты PostgreSQL, e2e-тесты, ESLint, проверку Prettier, проверку типов TypeScript и production build для pull request и push в `main`.
 
 Используйте узконаправленные ветки, например `feat/persist-load-drafts`, и conventional commit subjects, например `feat(api): persist load drafts`.
+
+Перед merge обязательно выполните `pnpm typecheck`, `pnpm test`, `pnpm lint`, `pnpm format:check` и `pnpm build`. Для изменения API дополнительно нужен живой запрос к запущенному сервису с JWT: unit-тест не заменяет проверку маршрутизации, guard и сериализации ответа.

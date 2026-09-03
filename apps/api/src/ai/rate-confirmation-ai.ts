@@ -23,12 +23,29 @@ export interface ExtractedStop {
 
 export interface RateConfirmationExtractionResult {
   brokerName: ExtractedText;
+  brokerContactName: ExtractedText;
+  brokerContactPhone: ExtractedText;
+  brokerContactEmail: ExtractedText;
   brokerLoadNumber: ExtractedText;
   rate: ExtractedText;
   commodity: ExtractedText;
   weight: ExtractedText;
+  pieces: ExtractedText;
   equipmentType: ExtractedText;
+  temperatureRequirements: ExtractedText;
   specialInstructions: ExtractedText;
+  detentionTerms: ExtractedText;
+  layoverTerms: ExtractedText;
+  tonuTerms: ExtractedText;
+  lumperInstructions: ExtractedText;
+  trackingRequirements: ExtractedText;
+  podRequirements: ExtractedText;
+  invoicingInstructions: ExtractedText;
+  billingEmail: ExtractedText;
+  billingAddress: ExtractedText;
+  factoringInformation: ExtractedText;
+  requiredDocuments: ExtractedText;
+  notes: ExtractedText;
   stops: ExtractedStop[];
 }
 

@@ -3,6 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
   CreateStopInput,
+  CreateExtractedStopInput,
   StopRepository,
   UpdateStopInput,
 } from '../application/stop.service.js';
@@ -35,6 +36,32 @@ export class PrismaStopRepository implements StopRepository {
         referenceNumber: input.referenceNumber,
         instructions: input.instructions,
       },
+    });
+  }
+
+  async createMany(loadId: string, inputs: CreateExtractedStopInput[]): Promise<Stop[]> {
+    return this.prisma.$transaction(async (transaction) => {
+      const existingCount = await transaction.stop.count({ where: { loadId } });
+      if (existingCount > 0) {
+        throw new Error('Cannot apply extracted stops to a route that already has stops.');
+      }
+
+      return Promise.all(
+        inputs.map((input, index) =>
+          transaction.stop.create({
+            data: {
+              loadId,
+              position: index + 1,
+              type: input.type,
+              facilityName: input.facilityName,
+              addressLine1: input.addressLine1,
+              appointmentAt: input.appointmentAt,
+              referenceNumber: input.referenceNumber,
+              instructions: input.instructions,
+            },
+          }),
+        ),
+      );
     });
   }
 

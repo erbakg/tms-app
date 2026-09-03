@@ -1,4 +1,10 @@
-import { BadRequestException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Inject,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import type { LoadRepository } from './load.service.js';
 import { LOAD_REPOSITORY } from './load.service.js';
@@ -18,8 +24,18 @@ export interface CreateStopInput {
   instructions?: string;
 }
 
+export interface CreateExtractedStopInput {
+  type: StopType;
+  facilityName?: string;
+  addressLine1?: string;
+  appointmentAt?: Date | null;
+  referenceNumber?: string;
+  instructions?: string;
+}
+
 export interface StopRepository {
   create(loadId: string, input: CreateStopInput): Promise<Stop>;
+  createMany(loadId: string, inputs: CreateExtractedStopInput[]): Promise<Stop[]>;
   update(loadId: string, stopId: string, input: UpdateStopInput): Promise<Stop | null>;
   delete(loadId: string, stopId: string): Promise<boolean>;
   reorder(loadId: string, stopIds: string[]): Promise<Stop[] | null>;
@@ -42,6 +58,16 @@ export class StopService {
     }
 
     return this.stopRepository.create(loadId, input);
+  }
+
+  async createFromExtraction(loadId: string, inputs: CreateExtractedStopInput[]): Promise<Stop[]> {
+    const load = await this.loadRepository.findById(loadId);
+    if (load === null) throw new NotFoundException({ code: 'LOAD_NOT_FOUND' });
+    if (load.status !== 'DRAFT') throw new ConflictException({ code: 'LOAD_NOT_EDITABLE' });
+    if (load.stops.length > 0) throw new ConflictException({ code: 'STOPS_ALREADY_EXIST' });
+    if (inputs.length === 0) throw new BadRequestException({ code: 'EXTRACTION_HAS_NO_STOPS' });
+
+    return this.stopRepository.createMany(loadId, inputs);
   }
 
   async update(loadId: string, stopId: string, input: UpdateStopInput): Promise<Stop> {
