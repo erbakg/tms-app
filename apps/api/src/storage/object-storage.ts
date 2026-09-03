@@ -6,6 +6,7 @@ export interface PutObjectInput {
 
 export interface ObjectStorage {
   putObject(input: PutObjectInput): Promise<void>;
+  getObject(key: string): Promise<Buffer>;
   deleteObject(key: string): Promise<void>;
   createDownloadUrl(key: string): Promise<string>;
 }

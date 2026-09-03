@@ -38,6 +38,18 @@ export class S3ObjectStorageService implements ObjectStorage {
     );
   }
 
+  async getObject(key: string): Promise<Buffer> {
+    const response = await this.client.send(
+      new GetObjectCommand({ Bucket: this.bucket, Key: key }),
+    );
+
+    if (response.Body === undefined) {
+      throw new Error(`Object ${key} has no body.`);
+    }
+
+    return Buffer.from(await response.Body.transformToByteArray());
+  }
+
   async deleteObject(key: string): Promise<void> {
     await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }

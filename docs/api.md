@@ -68,8 +68,10 @@ API пока не версионируется. Версионирование �
 
 ## AI-извлечение Rate Confirmation
 
-После каждой загрузки Rate Confirmation API создаёт запись extraction со статусом `PENDING` и ставит задачу в Redis/BullMQ. Статус не означает, что данные уже внесены в Load: результат будет доступен диспетчеру для обязательной проверки и ручной корректировки.
+После каждой загрузки Rate Confirmation API создаёт запись extraction со статусом `PENDING` и ставит задачу в Redis/BullMQ. Запущенный worker переводит её в `PROCESSING`, затем в `COMPLETED` либо `FAILED`. Статус не означает, что данные уже внесены в Load: результат будет доступен диспетчеру для обязательной проверки и ручной корректировки.
 
 ### `GET /loads/:loadId/documents/:documentId/extraction`
 
 Возвращает статус и результат extraction. Возможные статусы: `PENDING`, `PROCESSING`, `COMPLETED`, `FAILED`.
+
+При `COMPLETED` поле `result` содержит поля `brokerName`, `brokerLoadNumber`, `rate`, `commodity`, `weight`, `equipmentType`, `specialInstructions` и массив `stops`. Каждое значение хранится как `{ "value": string | null, "confidence": "HIGH" | "MEDIUM" | "LOW" | "NOT_FOUND" }`; это позволяет интерфейсу выделять сомнительные данные и не выдавать предположение за факт.

@@ -43,6 +43,7 @@ const documentRepository = (overrides: Partial<DocumentRepository> = {}): Docume
 
 const objectStorage = (overrides: Partial<ObjectStorage> = {}): ObjectStorage => ({
   putObject: async () => undefined,
+  getObject: async () => Buffer.alloc(0),
   deleteObject: async () => undefined,
   createDownloadUrl: async () => 'https://storage.example/download',
   ...overrides,
