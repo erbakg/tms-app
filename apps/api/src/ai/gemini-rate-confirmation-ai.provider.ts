@@ -95,7 +95,7 @@ const prompt = `Extract the rate confirmation into the requested JSON schema. Do
 @Injectable()
 export class GeminiRateConfirmationAiProvider implements RateConfirmationAiProvider {
   readonly name = 'gemini';
-  readonly model = process.env.GEMINI_MODEL ?? 'gemini-3.6-flash';
+  readonly model = process.env.GEMINI_MODEL ?? 'gemini-3.8-flash';
 
   async extract(input: RateConfirmationExtractionInput): Promise<RateConfirmationExtractionResult> {
     const apiKey = process.env.GEMINI_API_KEY;
@@ -110,6 +110,7 @@ export class GeminiRateConfirmationAiProvider implements RateConfirmationAiProvi
         'content-type': 'application/json',
         'x-goog-api-key': apiKey,
       },
+      signal: AbortSignal.timeout(60_000),
       body: JSON.stringify({
         model: this.model,
         input: [
@@ -139,15 +140,42 @@ export class GeminiRateConfirmationAiProvider implements RateConfirmationAiProvi
   }
 
   private readOutputText(payload: unknown): string {
-    if (
-      typeof payload === 'object' &&
-      payload !== null &&
-      'output_text' in payload &&
-      typeof payload.output_text === 'string'
-    ) {
+    if (typeof payload !== 'object' || payload === null) {
+      return JSON.stringify(payload);
+    }
+
+    if ('output_text' in payload && typeof payload.output_text === 'string') {
       return payload.output_text;
     }
 
-    throw new Error('Gemini response does not contain output_text.');
+    if (!('steps' in payload) || !Array.isArray(payload.steps)) {
+      return JSON.stringify(payload);
+    }
+
+    for (const step of payload.steps) {
+      if (
+        typeof step !== 'object' ||
+        step === null ||
+        !('type' in step) ||
+        step.type !== 'model_output' ||
+        !('content' in step) ||
+        !Array.isArray(step.content)
+      ) {
+        continue;
+      }
+
+      for (const content of step.content) {
+        if (
+          typeof content === 'object' &&
+          content !== null &&
+          'text' in content &&
+          typeof content.text === 'string'
+        ) {
+          return content.text;
+        }
+      }
+    }
+
+    return JSON.stringify(payload);
   }
 }

@@ -31,7 +31,7 @@ API слушает `http://localhost:3000`; endpoint проверки состо
 ```dotenv
 AI_PROVIDER="gemini"
 GEMINI_API_KEY="..."
-GEMINI_MODEL="gemini-3.6-flash"
+GEMINI_MODEL="gemini-3.8-flash"
 ```
 
 `apps/api/.env` исключён из Git. Ключ нельзя помещать в `.env.example`, `.env.test`, исходный код, Markdown или commit. Если ключ был показан в терминале, чате или уже попал в Git, отзовите его в Google AI Studio и выпустите новый. `GEMINI_MODEL` можно изменить без изменения кода, если выбранная модель доступна для проекта.

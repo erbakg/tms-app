@@ -70,4 +70,50 @@ describe('GeminiRateConfirmationAiProvider', () => {
       }),
     ).rejects.toThrow('Gemini request failed (429)');
   });
+
+  it('accepts the direct JSON body returned by the REST API', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(JSON.stringify(validOutput))),
+    );
+
+    await expect(
+      new GeminiRateConfirmationAiProvider().extract({
+        filename: 'rate.pdf',
+        mimeType: 'application/pdf',
+        contents: Buffer.alloc(0),
+      }),
+    ).resolves.toEqual(validOutput);
+  });
+
+  it('reads text from an interaction model-output step', async () => {
+    process.env.GEMINI_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              status: 'completed',
+              steps: [
+                { type: 'thought' },
+                {
+                  type: 'model_output',
+                  content: [{ type: 'text', text: JSON.stringify(validOutput) }],
+                },
+              ],
+            }),
+          ),
+      ),
+    );
+
+    await expect(
+      new GeminiRateConfirmationAiProvider().extract({
+        filename: 'rate.pdf',
+        mimeType: 'application/pdf',
+        contents: Buffer.alloc(0),
+      }),
+    ).resolves.toEqual(validOutput);
+  });
 });
