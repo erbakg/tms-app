@@ -5,4 +5,5 @@ This folder documents decisions that affect implementation, operations, and the 
 - [Local development](local-development.md) — prerequisites, services, and commands.
 - [Architecture](architecture.md) — application boundaries and data ownership.
 - [Data model](data-model.md) — the initial PostgreSQL domain model.
+- [API contract](api.md) — currently implemented dispatcher endpoints.
 - [Delivery workflow](delivery-workflow.md) — TDD and pull-request quality gates.
