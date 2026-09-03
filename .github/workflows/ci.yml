@@ -67,7 +67,7 @@ jobs:
         run: pnpm --filter @312kg/api exec prisma generate --schema prisma/schema.prisma
 
       - name: Apply database migrations
-        run: pnpm --filter @312kg/api prisma migrate deploy
+        run: pnpm --filter @312kg/api exec prisma migrate deploy --schema prisma/schema.prisma
 
       - name: Start MinIO
         run: |
