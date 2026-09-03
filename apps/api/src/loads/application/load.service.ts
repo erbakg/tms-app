@@ -21,6 +21,7 @@ export interface LoadRepository {
   create(load: Load): Promise<Load>;
   findById(id: string): Promise<LoadDetails | null>;
   confirm(id: string): Promise<Load | null>;
+  updateBrokerLoadNumber(id: string, brokerLoadNumber: string | null): Promise<Load | null>;
 }
 
 export interface LoadDetails extends Load {
@@ -54,6 +55,12 @@ export class LoadService {
     if (load === null) {
       throw new NotFoundException({ code: 'LOAD_NOT_FOUND' });
     }
+    return load;
+  }
+
+  async updateBrokerLoadNumber(id: string, brokerLoadNumber: string | null): Promise<Load> {
+    const load = await this.loadRepository.updateBrokerLoadNumber(id, brokerLoadNumber);
+    if (load === null) throw new NotFoundException({ code: 'LOAD_NOT_FOUND' });
     return load;
   }
 }

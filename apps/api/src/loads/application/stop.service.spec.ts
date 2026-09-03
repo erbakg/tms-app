@@ -34,6 +34,7 @@ const stop: Stop = {
 const existingLoadRepository = (): LoadRepository => ({
   create: async (draft) => draft,
   confirm: async () => load,
+  updateBrokerLoadNumber: async () => load,
   findById: async () => load,
 });
 
@@ -54,6 +55,7 @@ describe('StopService', () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
       confirm: async () => null,
+      updateBrokerLoadNumber: async () => null,
       findById: async () => null,
     };
     const repository: StopRepository = {
@@ -103,6 +105,7 @@ describe('StopService', () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
       confirm: async () => null,
+      updateBrokerLoadNumber: async () => null,
       findById: async () => null,
     };
     const repository: StopRepository = {

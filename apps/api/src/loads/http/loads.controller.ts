@@ -7,6 +7,7 @@ import {
   NotFoundException,
   Param,
   Post,
+  Patch,
 } from '@nestjs/common';
 import { z } from 'zod';
 
@@ -17,6 +18,9 @@ import type { Load, LoadDetails } from '../application/load.service.js';
 
 const createLoadDraftSchema = z.object({
   brokerLoadNumber: z.string().trim().min(1).max(100).optional(),
+});
+const updateLoadSchema = z.object({
+  brokerLoadNumber: z.string().trim().min(1).max(100).nullable(),
 });
 
 @Roles('ADMIN', 'DISPATCHER')
@@ -52,5 +56,13 @@ export class LoadsController {
   @Post(':loadId/confirm')
   confirm(@Param('loadId') loadId: string): Promise<Load> {
     return this.loadService.confirm(loadId);
+  }
+
+  @Patch(':loadId')
+  update(@Param('loadId') loadId: string, @Body() body: unknown): Promise<Load> {
+    const parsed = updateLoadSchema.safeParse(body);
+    if (!parsed.success)
+      throw new BadRequestException({ code: 'INVALID_LOAD_DRAFT', issues: parsed.error.issues });
+    return this.loadService.updateBrokerLoadNumber(loadId, parsed.data.brokerLoadNumber);
   }
 }

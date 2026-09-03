@@ -42,6 +42,7 @@ describe('LoadService', () => {
       create: async (load) => load,
       findById: async () => existing,
       confirm: async () => existing,
+      updateBrokerLoadNumber: async () => existing,
     };
     const service = new LoadService(repository);
 
@@ -72,4 +73,5 @@ const createRepository = (): LoadRepository => ({
   create: async (load) => load,
   findById: async () => null,
   confirm: async () => null,
+  updateBrokerLoadNumber: async () => null,
 });

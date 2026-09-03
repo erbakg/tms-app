@@ -66,6 +66,16 @@ export class PrismaLoadRepository implements LoadRepository {
     });
   }
 
+  async updateBrokerLoadNumber(id: string, brokerLoadNumber: string | null): Promise<Load | null> {
+    try {
+      return this.toLoad(
+        await this.prisma.load.update({ where: { id }, data: { brokerLoadNumber } }),
+      );
+    } catch {
+      return null;
+    }
+  }
+
   private toLoad(stored: {
     id: string;
     brokerLoadNumber: string | null;

@@ -32,6 +32,7 @@ const document: LoadDocument = {
 const existingLoadRepository = (): LoadRepository => ({
   create: async (draft) => draft,
   confirm: async () => (document.loadId === load.id ? load : null),
+  updateBrokerLoadNumber: async () => load,
   findById: async () => load,
 });
 
@@ -100,6 +101,7 @@ describe('DocumentService', () => {
     const loadRepository: LoadRepository = {
       create: async (draft) => draft,
       confirm: async () => null,
+      updateBrokerLoadNumber: async () => null,
       findById: async () => null,
     };
     const service = new DocumentService(
