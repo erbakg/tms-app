@@ -1,0 +1,29 @@
+{
+  "name": "312kg-tms",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.24.0",
+  "engines": {
+    "node": ">=22 <23"
+  },
+  "scripts": {
+    "build": "pnpm --filter @312kg/api build",
+    "lint": "eslint . --max-warnings=0",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm --filter @312kg/api test",
+    "test:coverage": "pnpm --filter @312kg/api test:coverage",
+    "test:watch": "pnpm --filter @312kg/api test:watch",
+    "test:e2e": "pnpm --filter @312kg/api test:e2e",
+    "typecheck": "pnpm --filter @312kg/api typecheck"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.48.0"
+  }
+}
