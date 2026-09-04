@@ -36,6 +36,7 @@ const existingLoadRepository = (): LoadRepository => ({
   assignDriver: async () => load,
   setDriverFieldVisibility: async () => undefined,
   findAssignedToDriver: async () => [],
+  findRecent: async () => [],
   findById: async () => load,
 });
 
@@ -108,6 +109,7 @@ describe('DocumentService', () => {
       assignDriver: async () => null,
       setDriverFieldVisibility: async () => undefined,
       findAssignedToDriver: async () => [],
+      findRecent: async () => [],
       findById: async () => null,
     };
     const service = new DocumentService(

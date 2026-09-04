@@ -107,6 +107,11 @@ export class LoadsController {
     return this.loadService.createDraft(parsed.data);
   }
 
+  @Get()
+  findRecent(): Promise<Load[]> {
+    return this.loadService.findRecent();
+  }
+
   @Get(':loadId')
   async getById(@Param('loadId') loadId: string): Promise<LoadDetails> {
     const load = await this.loadService.findById(loadId);

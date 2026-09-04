@@ -18,6 +18,10 @@ API пока не версионируется. Все endpoints, кроме `GE
 { "brokerLoadNumber": "784521" }
 ```
 
+### `GET /loads`
+
+Возвращает до 50 последних Load, начиная с наиболее новых. Endpoint нужен для очереди диспетчера в админке и доступен только `ADMIN` и `DISPATCHER`.
+
 ### `POST /loads/rate-confirmations`
 
 Единый intake endpoint для первого шага процесса: принимает тот же `multipart/form-data` файл `file` (PDF/JPG/PNG до 20 MiB), создаёт `DRAFT` Load, прикрепляет к нему RC версии 1 и ставит extraction в очередь. Необязательное текстовое поле multipart `brokerLoadNumber` предварительно заполняет номер брокера. Это основной путь для сценария «загрузить RC → получить черновик для review».

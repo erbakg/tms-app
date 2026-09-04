@@ -38,6 +38,7 @@ const existingLoadRepository = (): LoadRepository => ({
   assignDriver: async () => load,
   setDriverFieldVisibility: async () => undefined,
   findAssignedToDriver: async () => [],
+  findRecent: async () => [],
   findById: async () => load,
 });
 
@@ -63,6 +64,7 @@ describe('StopService', () => {
       assignDriver: async () => null,
       setDriverFieldVisibility: async () => undefined,
       findAssignedToDriver: async () => [],
+      findRecent: async () => [],
       findById: async () => null,
     };
     const repository: StopRepository = {
@@ -119,6 +121,7 @@ describe('StopService', () => {
       assignDriver: async () => null,
       setDriverFieldVisibility: async () => undefined,
       findAssignedToDriver: async () => [],
+      findRecent: async () => [],
       findById: async () => null,
     };
     const repository: StopRepository = {

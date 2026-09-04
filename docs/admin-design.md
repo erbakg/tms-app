@@ -19,3 +19,9 @@
 ```bash
 pnpm --filter @312kg/admin dev
 ```
+
+## Рабочие сценарии первого экрана
+
+Админка сохраняет JWT только в `sessionStorage` текущей вкладки. После входа загружает очередь через `GET /loads`; поиск фильтрует полученные Loads на клиенте. Кнопка upload открывает форму и отправляет файл в `POST /loads/rate-confirmations`. Карточка или строка Load открывает review: можно сохранить номер брокера, rate и internal instructions, а черновик подтвердить.
+
+По умолчанию Vite-клиент использует API `http://localhost:3100`. Для другого окружения передайте `VITE_API_URL`. Backend разрешает CORS; в production задайте через `CORS_ORIGIN` точный список доменов через запятую.

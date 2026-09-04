@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ConflictException, NotFoundException } from '@nestjs/common';
 
-import { LoadService, type LoadDetails, type LoadRepository } from './load.service.js';
+import { LoadService, type Load, type LoadDetails, type LoadRepository } from './load.service.js';
 
 describe('LoadService', () => {
   it('creates an editable draft without assigning an internal load ID', async () => {
@@ -46,10 +46,24 @@ describe('LoadService', () => {
       assignDriver: async () => existing,
       setDriverFieldVisibility: async () => undefined,
       findAssignedToDriver: async () => [],
+      findRecent: async () => [],
     };
     const service = new LoadService(repository);
 
     await expect(service.findById(existing.id)).resolves.toEqual(existing);
+  });
+
+  it('returns recent loads for the dispatcher workspace', async () => {
+    const draft: Load = {
+      id: '91e7d340-b142-4ca0-96d8-4f5b41c89887',
+      brokerLoadNumber: 'BR-42',
+      createdAt: new Date(),
+      internalLoadId: null,
+      status: 'DRAFT',
+    };
+    const service = new LoadService({ ...createRepository(), findRecent: async () => [draft] });
+
+    await expect(service.findRecent()).resolves.toEqual([draft]);
   });
 
   it('confirms a draft and rejects an unknown load', async () => {
@@ -106,4 +120,5 @@ const createRepository = (): LoadRepository => ({
   assignDriver: async () => null,
   setDriverFieldVisibility: async () => undefined,
   findAssignedToDriver: async () => [],
+  findRecent: async () => [],
 });

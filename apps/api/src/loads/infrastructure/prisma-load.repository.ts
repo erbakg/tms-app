@@ -46,6 +46,11 @@ export class PrismaLoadRepository implements LoadRepository {
     };
   }
 
+  async findRecent(): Promise<Load[]> {
+    const loads = await this.prisma.load.findMany({ orderBy: { createdAt: 'desc' }, take: 50 });
+    return loads.map((load) => this.toLoad(load));
+  }
+
   async confirm(id: string): Promise<Load | null> {
     return this.prisma.$transaction(async (transaction) => {
       const current = await transaction.load.findUnique({ where: { id } });

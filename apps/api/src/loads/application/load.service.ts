@@ -82,6 +82,7 @@ export interface LoadRepository {
     visibleToDriver: boolean,
   ): Promise<void>;
   findAssignedToDriver(driverId: string): Promise<DriverLoad[]>;
+  findRecent(): Promise<Load[]>;
 }
 
 export interface LoadDetails extends Load {
@@ -128,6 +129,10 @@ export class LoadService {
 
   findById(id: string): Promise<LoadDetails | null> {
     return this.loadRepository.findById(id);
+  }
+
+  findRecent(): Promise<Load[]> {
+    return this.loadRepository.findRecent();
   }
 
   async confirm(id: string): Promise<Load> {
