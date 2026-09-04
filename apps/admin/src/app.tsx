@@ -201,62 +201,68 @@ const DispatcherWorkspace = ({
           />
           <Metric label="Exceptions" value="00" helper="No client-side exceptions" accent="amber" />
         </section>
-        <section className="workspace-grid">
-          <article className="card load-queue">
-            <div className="card-heading">
-              <div>
-                <p className="eyebrow">Live queue</p>
-                <h2>{activeTab === 'Dispatch' ? 'Recent loads' : activeTab}</h2>
+        {activeTab === 'Drivers' ? (
+          <DriverDirectory accessToken={session.accessToken} />
+        ) : activeTab === 'Accounting' ? (
+          <AccountingOverview loads={loads} />
+        ) : (
+          <section className="workspace-grid">
+            <article className="card load-queue">
+              <div className="card-heading">
+                <div>
+                  <p className="eyebrow">Live queue</p>
+                  <h2>{activeTab === 'Dispatch' ? 'Recent loads' : 'All loads'}</h2>
+                </div>
+                <button className="text-button" onClick={() => void refreshLoads()}>
+                  Refresh <ChevronDown size={15} />
+                </button>
               </div>
-              <button className="text-button" onClick={() => void refreshLoads()}>
-                Refresh <ChevronDown size={15} />
-              </button>
-            </div>
-            <div className="search-field">
-              <Search size={18} />
-              <input
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                aria-label="Search loads"
-                placeholder="Search load, broker or commodity"
-              />
-            </div>
-            <div className="load-list">
-              {isLoading ? <QueuePlaceholder text="Loading loads…" /> : null}
-              {!isLoading && filteredLoads.length === 0 ? (
-                <QueuePlaceholder text="No loads found. Upload a rate confirmation to start." />
-              ) : null}
-              {filteredLoads.map((load) => (
-                <LoadRow key={load.id} load={load} onOpen={openReview} />
-              ))}
-            </div>
-          </article>
-          <aside className="load-review-panel">
-            <FeaturedLoad load={featuredLoad} onOpen={openReview} />
-            <article className="profit-card">
-              <div className="profit-heading">
-                <span>DISPATCH READINESS</span>
-                <strong>
-                  {featuredLoad === undefined
-                    ? '0%'
-                    : featuredLoad.status === 'CONFIRMED'
-                      ? '100%'
-                      : '82%'}
-                </strong>
+              <div className="search-field">
+                <Search size={18} />
+                <input
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  aria-label="Search loads"
+                  placeholder="Search load, broker or commodity"
+                />
               </div>
-              <div className="progress-track">
-                <span />
+              <div className="load-list">
+                {isLoading ? <QueuePlaceholder text="Loading loads…" /> : null}
+                {!isLoading && filteredLoads.length === 0 ? (
+                  <QueuePlaceholder text="No loads found. Upload a rate confirmation to start." />
+                ) : null}
+                {filteredLoads.map((load) => (
+                  <LoadRow key={load.id} load={load} onOpen={openReview} />
+                ))}
               </div>
-              <p>
-                {featuredLoad === undefined
-                  ? 'Upload a Rate Confirmation to begin review.'
-                  : featuredLoad.status === 'CONFIRMED'
-                    ? 'This Load is confirmed and available for driver assignment.'
-                    : 'AI data is ready. Confirm broker details before assigning a driver.'}
-              </p>
             </article>
-          </aside>
-        </section>
+            <aside className="load-review-panel">
+              <FeaturedLoad load={featuredLoad} onOpen={openReview} />
+              <article className="profit-card">
+                <div className="profit-heading">
+                  <span>DISPATCH READINESS</span>
+                  <strong>
+                    {featuredLoad === undefined
+                      ? '0%'
+                      : featuredLoad.status === 'CONFIRMED'
+                        ? '100%'
+                        : '82%'}
+                  </strong>
+                </div>
+                <div className="progress-track">
+                  <span />
+                </div>
+                <p>
+                  {featuredLoad === undefined
+                    ? 'Upload a Rate Confirmation to begin review.'
+                    : featuredLoad.status === 'CONFIRMED'
+                      ? 'This Load is confirmed and available for driver assignment.'
+                      : 'AI data is ready. Confirm broker details before assigning a driver.'}
+                </p>
+              </article>
+            </aside>
+          </section>
+        )}
       </main>
       {isUploadOpen ? (
         <UploadDialog
@@ -281,6 +287,129 @@ const DispatcherWorkspace = ({
         />
       )}
     </div>
+  );
+};
+
+const DriverDirectory = ({ accessToken }: { accessToken: string }): JSX.Element => {
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const refresh = async (): Promise<void> => {
+    setIsLoading(true);
+    try {
+      setDrivers(await api.getDrivers(accessToken));
+      setError(null);
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  useEffect(() => {
+    void refresh();
+  }, [accessToken]);
+  return (
+    <section className="directory-page">
+      <div className="page-section-heading">
+        <div>
+          <p className="eyebrow">People & assignment</p>
+          <h2>Driver directory</h2>
+          <p>
+            Choose a confirmed Load in Dispatch to assign a driver and control their visibility.
+          </p>
+        </div>
+        <button className="secondary-button" onClick={() => void refresh()}>
+          Refresh directory
+        </button>
+      </div>
+      {error === null ? null : <p className="dialog-error">{error}</p>}
+      {isLoading ? <QueuePlaceholder text="Loading driver accounts…" /> : null}
+      {!isLoading && drivers.length === 0 ? (
+        <QueuePlaceholder text="No driver accounts exist yet. Create a DRIVER user through the secured API." />
+      ) : null}
+      <div className="driver-grid">
+        {drivers.map((driver) => (
+          <article className="driver-card" key={driver.id}>
+            <span className="driver-avatar">{initials(driver.fullName)}</span>
+            <div>
+              <p className="eyebrow">Driver</p>
+              <h3>{driver.fullName}</h3>
+              <a href={`mailto:${driver.email}`}>{driver.email}</a>
+            </div>
+            <span className="status-pill green">Available to assign</span>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+const AccountingOverview = ({ loads }: { loads: Load[] }): JSX.Element => {
+  const rateTotal = loads.reduce((total, load) => total + parseUsdAmount(load.rate), 0);
+  const confirmed = loads.filter((load) => load.status === 'CONFIRMED');
+  const confirmedRateTotal = confirmed.reduce(
+    (total, load) => total + parseUsdAmount(load.rate),
+    0,
+  );
+  return (
+    <section className="accounting-page">
+      <div className="page-section-heading">
+        <div>
+          <p className="eyebrow">Revenue overview</p>
+          <h2>Accounting workspace</h2>
+          <p>
+            Rates are read from the live Load queue. Invoice, payment and POD statuses are not
+            modeled yet.
+          </p>
+        </div>
+      </div>
+      <div className="accounting-metrics">
+        <Metric
+          label="All quoted rate"
+          value={formatUsd(rateTotal)}
+          helper="Across the current queue"
+          accent="blue"
+        />
+        <Metric
+          label="Confirmed rate"
+          value={formatUsd(confirmedRateTotal)}
+          helper={`${confirmed.length} confirmed load${confirmed.length === 1 ? '' : 's'}`}
+          accent="green"
+        />
+        <Metric
+          label="Draft rate"
+          value={formatUsd(rateTotal - confirmedRateTotal)}
+          helper="Still awaiting confirmation"
+          accent="amber"
+        />
+      </div>
+      <article className="card accounting-table-card">
+        <div className="card-heading">
+          <div>
+            <p className="eyebrow">Rate ledger</p>
+            <h2>Loads awaiting accounting workflow</h2>
+          </div>
+        </div>
+        <div className="accounting-table" role="table" aria-label="Rate ledger">
+          <div className="accounting-row header" role="row">
+            <span>Load</span>
+            <span>Broker</span>
+            <span>Rate</span>
+            <span>Status</span>
+          </div>
+          {loads.map((load) => (
+            <div className="accounting-row" key={load.id} role="row">
+              <strong>{load.internalLoadId ?? load.brokerLoadNumber ?? 'Draft load'}</strong>
+              <span>{load.brokerName ?? 'Not reviewed'}</span>
+              <span>{load.rate ?? 'Not set'}</span>
+              <span className={`status-pill ${load.status === 'CONFIRMED' ? 'green' : 'blue'}`}>
+                {load.status === 'CONFIRMED' ? 'Confirmed' : 'Draft'}
+              </span>
+            </div>
+          ))}
+        </div>
+      </article>
+    </section>
   );
 };
 
@@ -1243,6 +1372,25 @@ const Detail = ({ label, value }: { label: string; value: string }): JSX.Element
 );
 const formatDate = (value: string): string =>
   new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' }).format(new Date(value));
+const parseUsdAmount = (value: string | null | undefined): number => {
+  if (value === null || value === undefined) return 0;
+  const amount = Number(value.replaceAll(/[^0-9.-]/g, ''));
+  return Number.isFinite(amount) ? amount : 0;
+};
+const formatUsd = (amount: number): string =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    maximumFractionDigits: 0,
+  }).format(amount);
+const initials = (fullName: string): string =>
+  fullName
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase();
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : 'An unexpected error occurred.';
 const readSession = (): Session | null => {

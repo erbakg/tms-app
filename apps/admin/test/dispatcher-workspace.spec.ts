@@ -233,6 +233,14 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   await expect(page.getByRole('heading', { name: 'Recent loads' })).toBeVisible();
   await expect(page.getByRole('button', { name: /DRAFT-42/ })).toBeVisible();
 
+  await page.getByRole('button', { name: 'Drivers' }).click();
+  await expect(page.getByRole('heading', { name: 'Driver directory' })).toBeVisible();
+  await expect(page.getByText('Alex Driver')).toBeVisible();
+  await page.getByRole('button', { name: 'Accounting' }).click();
+  await expect(page.getByRole('heading', { name: 'Accounting workspace' })).toBeVisible();
+  await expect(page.getByRole('table', { name: 'Rate ledger' })).toBeVisible();
+  await page.getByRole('button', { name: 'Dispatch' }).click();
+
   await page.getByLabel('Search loads').fill('not found');
   await expect(
     page.getByText('No loads found. Upload a rate confirmation to start.'),
