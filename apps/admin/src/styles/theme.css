@@ -1,0 +1,46 @@
+:root {
+  /* Brand palette: change these values to retheme the application. */
+  --color-navy-950: #101a37;
+  --color-navy-900: #17264e;
+  --color-navy-800: #20345f;
+  --color-blue-700: #2563eb;
+  --color-blue-600: #377dff;
+  --color-blue-100: #dceaff;
+  --color-indigo-50: #eef2ff;
+  --color-slate-950: #172033;
+  --color-slate-800: #34415a;
+  --color-slate-600: #667792;
+  --color-slate-400: #94a3b8;
+  --color-slate-200: #e4eaf3;
+  --color-slate-100: #f2f5f9;
+  --color-white: #ffffff;
+  --color-green-700: #07865f;
+  --color-green-500: #11b981;
+  --color-green-50: #eafbf4;
+  --color-amber-600: #c46b08;
+  --color-amber-400: #f5ae21;
+  --color-amber-50: #fff8e8;
+  --color-red-500: #ef6666;
+
+  /* Semantic aliases used by UI components. */
+  --app-background: #f7f9fc;
+  --surface-primary: var(--color-white);
+  --surface-muted: var(--color-slate-100);
+  --surface-navy: var(--color-navy-950);
+  --text-primary: var(--color-slate-950);
+  --text-secondary: var(--color-slate-600);
+  --text-on-dark: var(--color-white);
+  --border-subtle: var(--color-slate-200);
+  --accent-primary: var(--color-blue-600);
+  --accent-primary-soft: var(--color-blue-100);
+  --success: var(--color-green-500);
+  --success-soft: var(--color-green-50);
+  --warning: var(--color-amber-400);
+  --warning-soft: var(--color-amber-50);
+  --shadow-card: 0 12px 32px rgb(37 57 96 / 8%);
+  --shadow-floating: 0 20px 45px rgb(19 34 68 / 16%);
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+}

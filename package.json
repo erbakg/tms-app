@@ -7,7 +7,7 @@
     "node": ">=22 <23"
   },
   "scripts": {
-    "build": "pnpm --filter @312kg/api build",
+    "build": "pnpm --filter @312kg/api build && pnpm --filter @312kg/admin build",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -16,7 +16,7 @@
     "test:integration": "pnpm --filter @312kg/api test:integration",
     "test:watch": "pnpm --filter @312kg/api test:watch",
     "test:e2e": "pnpm --filter @312kg/api test:e2e",
-    "typecheck": "pnpm --filter @312kg/api typecheck"
+    "typecheck": "pnpm --filter @312kg/api typecheck && pnpm --filter @312kg/admin typecheck"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
