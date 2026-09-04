@@ -87,6 +87,8 @@ export interface LoadRepository {
 
 export interface LoadDetails extends Load {
   stops: Stop[];
+  assignedDriver: { id: string; fullName: string; email: string } | null;
+  fieldVisibility: Array<{ field: DriverVisibleField; visibleToDriver: boolean }>;
 }
 
 export const LOAD_REPOSITORY = Symbol('LOAD_REPOSITORY');

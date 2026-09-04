@@ -22,8 +22,12 @@ pnpm --filter @312kg/admin dev
 
 ## Рабочие сценарии первого экрана
 
-Админка сохраняет JWT только в `sessionStorage` текущей вкладки. После входа загружает очередь через `GET /loads`; поиск фильтрует полученные Loads на клиенте. Кнопка upload открывает форму и отправляет файл в `POST /loads/rate-confirmations`. Карточка или строка Load открывает review: можно сохранить номер брокера, rate и internal instructions, а черновик подтвердить.
+Админка сохраняет JWT только в `sessionStorage` текущей вкладки. После входа загружает очередь через `GET /loads`; поиск фильтрует полученные Loads на клиенте. Кнопка upload открывает форму и отправляет файл в `POST /loads/rate-confirmations`. Карточка или строка Load открывает review: можно сохранить номер брокера, broker, rate, equipment и internal instructions, а черновик подтвердить.
 
 В review админка запрашивает current RC и его extraction. Пока AI работает, статус обновляется автоматически. При `COMPLETED` показываются confidence для ключевых полей и отдельная кнопка `Apply AI stops`. Она доступна только у черновика без stops и вызывает `POST /loads/:loadId/documents/:documentId/extraction/apply-stops`; AI никогда не создаёт маршрут сам.
+
+Маршрут можно собирать и без AI: dispatcher добавляет pickup/delivery, правит facility/address/city/state, меняет порядок стрелками или удаляет stop. Эти действия непосредственно вызывают `POST`, `PATCH` и `DELETE /loads/:loadId/stops`, а перестановка — `PATCH /loads/:loadId/stops/reorder`.
+
+После подтверждения появляется блок handoff: список водителей берётся из `GET /users?role=DRIVER`, назначение выполняется через `POST /loads/:loadId/assign-driver`. В этом же блоке dispatcher включает отдельные разрешённые поля водителя. Платёжные и внутренние поля не показаны в настройке, поэтому их невозможно случайно открыть из интерфейса.
 
 По умолчанию Vite-клиент использует API `http://localhost:3100`. Для другого окружения передайте `VITE_API_URL`. Backend разрешает CORS; в production задайте через `CORS_ORIGIN` точный список доменов через запятую.

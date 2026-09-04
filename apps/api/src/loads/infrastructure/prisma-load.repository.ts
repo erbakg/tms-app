@@ -33,7 +33,11 @@ export class PrismaLoadRepository implements LoadRepository {
   async findById(id: string): Promise<LoadDetails | null> {
     const stored = await this.prisma.load.findUnique({
       where: { id },
-      include: { stops: { orderBy: { position: 'asc' } } },
+      include: {
+        stops: { orderBy: { position: 'asc' } },
+        assignedDriver: { select: { id: true, fullName: true, email: true } },
+        fieldVisibility: { orderBy: { field: 'asc' } },
+      },
     });
 
     if (stored === null) {
@@ -43,6 +47,11 @@ export class PrismaLoadRepository implements LoadRepository {
     return {
       ...this.toLoad(stored),
       stops: stored.stops.map((stop) => this.toStop(stop)),
+      assignedDriver: stored.assignedDriver,
+      fieldVisibility: stored.fieldVisibility.map((item) => ({
+        field: item.field as DriverVisibleField,
+        visibleToDriver: item.visibleToDriver,
+      })),
     };
   }
 
@@ -123,6 +132,7 @@ export class PrismaLoadRepository implements LoadRepository {
     return loads.map((load) => ({
       ...this.toLoad(load),
       stops: load.stops.map((stop) => this.toStop(stop)),
+      assignedDriver: null,
       fieldVisibility: load.fieldVisibility.map((item) => ({
         field: item.field as DriverVisibleField,
         visibleToDriver: item.visibleToDriver,

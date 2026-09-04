@@ -37,6 +37,8 @@ describe('LoadService', () => {
       internalLoadId: null,
       status: 'DRAFT',
       stops: [],
+      assignedDriver: null,
+      fieldVisibility: [],
     };
     const repository: LoadRepository = {
       create: async (load) => load,
@@ -74,6 +76,8 @@ describe('LoadService', () => {
       internalLoadId: '312KG-10000',
       status: 'CONFIRMED',
       stops: [],
+      assignedDriver: null,
+      fieldVisibility: [],
     };
     const service = new LoadService({ ...createRepository(), confirm: async () => confirmed });
     await expect(service.confirm(confirmed.id)).resolves.toMatchObject({
@@ -93,6 +97,8 @@ describe('LoadService', () => {
       internalLoadId: '312KG-10001',
       status: 'CONFIRMED',
       stops: [],
+      assignedDriver: null,
+      fieldVisibility: [],
     };
     const service = new LoadService({
       ...createRepository(),

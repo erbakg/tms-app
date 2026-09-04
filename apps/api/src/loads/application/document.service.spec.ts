@@ -15,6 +15,8 @@ const load: LoadDetails = {
   internalLoadId: null,
   status: 'DRAFT',
   stops: [],
+  assignedDriver: null,
+  fieldVisibility: [],
 };
 
 const document: LoadDocument = {

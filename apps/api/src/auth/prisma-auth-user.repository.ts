@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../database/prisma.service.js';
-import type { AuthUser } from './auth.types.js';
+import type { AuthUser, DirectoryUser, UserRole } from './auth.types.js';
 import type { AuthUserRepository } from './auth.service.js';
 
 @Injectable()
@@ -14,5 +14,13 @@ export class PrismaAuthUserRepository implements AuthUserRepository {
 
   findByEmail(email: string): Promise<AuthUser | null> {
     return this.prisma.user.findUnique({ where: { email } });
+  }
+
+  findByRole(role: UserRole): Promise<DirectoryUser[]> {
+    return this.prisma.user.findMany({
+      where: { role },
+      orderBy: { fullName: 'asc' },
+      select: { id: true, email: true, fullName: true, role: true },
+    });
   }
 }

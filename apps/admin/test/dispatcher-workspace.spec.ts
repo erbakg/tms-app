@@ -17,6 +17,11 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   let wasPatched = false;
   let wasConfirmed = false;
   let wereStopsApplied = false;
+  let wasStopUpdated = false;
+  let wasStopCreated = false;
+  let wasStopsReordered = false;
+  let wasDriverAssigned = false;
+  const baseDetails = { assignedDriver: null, fieldVisibility: [] };
 
   await page.route('**/auth/login', async (route) => {
     await route.fulfill({
@@ -29,6 +34,18 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   await page.route('**/loads', async (route) => {
     if (route.request().method() === 'GET') await route.fulfill({ json: [draftLoad] });
   });
+  await page.route('**/users?role=DRIVER', async (route) => {
+    await route.fulfill({
+      json: [
+        {
+          id: 'driver-1',
+          email: 'alex.driver@example.test',
+          fullName: 'Alex Driver',
+          role: 'DRIVER',
+        },
+      ],
+    });
+  });
   await page.route('**/loads/load-1/confirm', async (route) => {
     wasConfirmed = true;
     await route.fulfill({
@@ -37,7 +54,7 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   });
   await page.route('**/loads/load-1', async (route) => {
     if (route.request().method() === 'GET') {
-      await route.fulfill({ json: { ...draftLoad, stops: [] } });
+      await route.fulfill({ json: { ...draftLoad, ...baseDetails, stops: [] } });
       return;
     }
     wasPatched = true;
@@ -104,13 +121,85 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
         {
           id: 'stop-1',
           type: 'PICKUP',
+          position: 1,
           facilityName: 'Origin Warehouse',
+          addressLine1: '100 Origin Ave',
           city: 'Dallas',
           state: 'TX',
           appointmentAt: null,
         },
       ],
     });
+  });
+  await page.route('**/loads/load-1/stops/stop-1', async (route) => {
+    if (route.request().method() === 'PATCH') {
+      wasStopUpdated = true;
+      await route.fulfill({
+        json: {
+          id: 'stop-1',
+          type: 'PICKUP',
+          position: 1,
+          facilityName: 'Updated Origin',
+          addressLine1: '100 Origin Ave',
+          city: 'Dallas',
+          state: 'TX',
+          appointmentAt: null,
+        },
+      });
+    }
+  });
+  await page.route('**/loads/load-1/stops', async (route) => {
+    if (route.request().method() === 'POST') {
+      wasStopCreated = true;
+      await route.fulfill({
+        json: {
+          id: 'stop-2',
+          type: 'DELIVERY',
+          position: 2,
+          facilityName: 'Destination',
+          addressLine1: '200 Delivery Rd',
+          city: 'Austin',
+          state: 'TX',
+          appointmentAt: null,
+        },
+      });
+    }
+  });
+  await page.route('**/loads/load-1/stops/reorder', async (route) => {
+    wasStopsReordered = true;
+    await route.fulfill({
+      json: [
+        {
+          id: 'stop-2',
+          type: 'DELIVERY',
+          position: 1,
+          facilityName: 'Destination',
+          addressLine1: '200 Delivery Rd',
+          city: 'Austin',
+          state: 'TX',
+          appointmentAt: null,
+        },
+        {
+          id: 'stop-1',
+          type: 'PICKUP',
+          position: 2,
+          facilityName: 'Updated Origin',
+          addressLine1: '100 Origin Ave',
+          city: 'Dallas',
+          state: 'TX',
+          appointmentAt: null,
+        },
+      ],
+    });
+  });
+  await page.route('**/loads/load-1/assign-driver', async (route) => {
+    wasDriverAssigned = true;
+    await route.fulfill({
+      json: { ...draftLoad, internalLoadId: '312KG-10042', status: 'CONFIRMED' },
+    });
+  });
+  await page.route('**/loads/load-1/field-visibility', async (route) => {
+    await route.fulfill({ status: 204 });
   });
   await page.route('**/loads/rate-confirmations', async (route) => {
     expect(route.request().method()).toBe('POST');
@@ -120,7 +209,13 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   });
   await page.route('**/loads/uploaded-load', async (route) => {
     await route.fulfill({
-      json: { ...draftLoad, id: 'uploaded-load', brokerLoadNumber: 'UP-1', stops: [] },
+      json: {
+        ...draftLoad,
+        ...baseDetails,
+        id: 'uploaded-load',
+        brokerLoadNumber: 'UP-1',
+        stops: [],
+      },
     });
   });
 
@@ -140,10 +235,21 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   await page.getByRole('button', { name: /DRAFT-42/ }).click();
 
   await expect(page.getByRole('dialog', { name: 'Review DRAFT-42' })).toBeVisible();
-  await expect(page.getByText('AI suggestions')).toBeVisible();
+  await expect(page.getByText('AI suggestions', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Apply AI stops' }).click();
   await expect.poll(() => wereStopsApplied).toBe(true);
   await expect(page.getByText('PICKUP: Origin Warehouse')).toBeVisible();
+  await page.getByLabel('Edit Origin Warehouse').click();
+  await page.getByLabel('Facility').fill('Updated Origin');
+  await page.getByRole('button', { name: 'Save stop' }).click();
+  await expect.poll(() => wasStopUpdated).toBe(true);
+  await page.getByRole('button', { name: 'Add stop' }).first().click();
+  await page.getByLabel('Facility').fill('Destination');
+  await page.getByLabel('City').fill('Austin');
+  await page.getByRole('button', { name: 'Add stop' }).last().click();
+  await expect.poll(() => wasStopCreated).toBe(true);
+  await page.getByLabel('Move Updated Origin down').click();
+  await expect.poll(() => wasStopsReordered).toBe(true);
   await page.getByLabel('Broker load number').fill('DRAFT-42-UPDATED');
   await page.getByLabel('Rate to customer').fill('1250.00');
   await page.getByRole('button', { name: 'Save review' }).click();
@@ -151,6 +257,9 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   await page.getByRole('button', { name: 'Confirm Load' }).click();
   await expect.poll(() => wasConfirmed).toBe(true);
   await expect(page.getByRole('heading', { name: '312KG-10042', exact: true })).toBeVisible();
+  await page.getByLabel('Assigned driver').selectOption('driver-1');
+  await page.getByRole('button', { name: 'Assign' }).click();
+  await expect.poll(() => wasDriverAssigned).toBe(true);
 
   await page.getByRole('button', { name: 'Close dialog' }).click();
   await page.getByRole('button', { name: 'Upload rate confirmation' }).click();

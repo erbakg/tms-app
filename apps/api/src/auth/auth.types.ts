@@ -18,3 +18,7 @@ export interface AuthUser extends AuthenticatedUser {
   fullName: string;
   passwordHash: string;
 }
+
+export interface DirectoryUser extends AuthenticatedUser {
+  fullName: string;
+}

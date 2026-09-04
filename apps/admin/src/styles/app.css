@@ -872,6 +872,15 @@ h1 span {
 .confidence-field small.not_found {
   color: var(--color-slate-400);
 }
+.confidence-field button {
+  justify-self: start;
+  padding: 0;
+  color: var(--color-blue-700);
+  border: 0;
+  background: transparent;
+  font-size: 10px;
+  font-weight: 800;
+}
 .stops-suggestion .secondary-button {
   display: inline-flex;
   align-items: center;
@@ -882,6 +891,196 @@ h1 span {
   border-color: #b8d2ff;
   background: white;
   font-size: 11px;
+}
+.route-editor,
+.driver-assignment {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  background: #fbfcff;
+}
+.driver-assignment {
+  border-color: #ccebdd;
+  background: #f4fffa;
+}
+.section-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.section-heading .form-label {
+  margin: 0 0 4px;
+}
+.section-heading small,
+.route-empty {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+}
+.small-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 33px;
+  padding: 0 10px;
+  color: var(--color-blue-700);
+  border: 1px solid #b8d2ff;
+  border-radius: 8px;
+  background: white;
+  font-size: 11px;
+  font-weight: 800;
+}
+.small-action.primary {
+  color: white;
+  border-color: var(--accent-primary);
+  background: var(--accent-primary);
+}
+.stop-list {
+  display: grid;
+  gap: 7px;
+}
+.stop-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  border: 1px solid #e4eaf3;
+  border-radius: 9px;
+  background: white;
+}
+.stop-type {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: none;
+  place-items: center;
+  border-radius: 50%;
+  font-size: 9px;
+  font-weight: 850;
+}
+.stop-type.pickup {
+  color: #167154;
+  background: #d9f8e9;
+}
+.stop-type.delivery {
+  color: #265cc1;
+  background: #e0ebff;
+}
+.stop-copy {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+}
+.stop-copy strong,
+.stop-copy small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.stop-copy strong {
+  font-size: 12px;
+}
+.stop-copy small {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.stop-actions {
+  display: inline-flex;
+  gap: 2px;
+}
+.stop-actions button {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  padding: 0;
+  place-items: center;
+  color: var(--text-secondary);
+  border: 0;
+  border-radius: 6px;
+  background: var(--surface-muted);
+}
+.stop-actions button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+.stop-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+}
+.segmented-control {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px;
+  border-radius: 8px;
+  background: #eaf0f8;
+}
+.segmented-control button {
+  min-height: 29px;
+  padding: 0 11px;
+  color: var(--text-secondary);
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 800;
+}
+.segmented-control button.active {
+  color: var(--text-primary);
+  background: white;
+  box-shadow: 0 1px 4px rgb(27 44 77 / 15%);
+}
+.stop-form-location {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 9px;
+}
+.route-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.route-form-actions .secondary-button {
+  min-height: 33px;
+  padding: 0 11px;
+  font-size: 11px;
+}
+.assignment-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+.assignment-row select {
+  width: 100%;
+  padding: 11px 12px;
+  color: var(--text-primary);
+  border: 0;
+  outline: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+}
+.visibility-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+}
+.visibility-grid label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 650;
+}
+.visibility-grid input {
+  accent-color: var(--accent-primary);
 }
 textarea {
   min-height: 82px;
@@ -976,6 +1175,15 @@ textarea:focus {
     grid-template-columns: repeat(2, 1fr);
   }
   .workspace-grid {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .dialog {
+    padding: 18px;
+  }
+  .confidence-grid,
+  .visibility-grid {
     grid-template-columns: 1fr;
   }
 }

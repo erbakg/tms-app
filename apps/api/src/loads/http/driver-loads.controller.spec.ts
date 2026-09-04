@@ -13,6 +13,7 @@ const load: DriverLoad = {
   internalLoadId: '312KG-10000',
   status: 'CONFIRMED',
   stops: [],
+  assignedDriver: null,
   fieldVisibility: [
     { field: 'brokerLoadNumber', visibleToDriver: true },
     { field: 'commodity', visibleToDriver: true },

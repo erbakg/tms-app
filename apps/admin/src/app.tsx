@@ -1,6 +1,7 @@
 import {
   Bell,
   ChevronDown,
+  ChevronUp,
   CircleDollarSign,
   ClipboardCheck,
   FileUp,
@@ -8,9 +9,12 @@ import {
   LogOut,
   MapPin,
   MoreHorizontal,
+  Pencil,
+  Plus,
   Search,
   ShieldCheck,
   Truck,
+  Trash2,
   UsersRound,
   X,
 } from 'lucide-react';
@@ -18,7 +22,17 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 
 import { api } from './api.js';
-import type { DocumentExtraction, Load, LoadDetails, LoadDocument, Session } from './api.js';
+import {
+  driverVisibleFields,
+  type DocumentExtraction,
+  type Driver,
+  type DriverVisibleField,
+  type Load,
+  type LoadDetails,
+  type LoadDocument,
+  type Session,
+  type Stop,
+} from './api.js';
 
 const navItems = [
   { label: 'Dispatch', icon: ClipboardCheck },
@@ -429,10 +443,28 @@ const ReviewDialog = ({
 }): JSX.Element => {
   const [details, setDetails] = useState(load);
   const [brokerLoadNumber, setBrokerLoadNumber] = useState(load.brokerLoadNumber ?? '');
+  const [brokerName, setBrokerName] = useState(load.brokerName ?? '');
   const [rate, setRate] = useState(load.rate ?? '');
+  const [equipmentType, setEquipmentType] = useState(load.equipmentType ?? '');
   const [specialInstructions, setSpecialInstructions] = useState(load.specialInstructions ?? '');
   const [isSaving, setIsSaving] = useState(false);
   const [isApplyingStops, setIsApplyingStops] = useState(false);
+  const [isSavingStop, setIsSavingStop] = useState(false);
+  const [editingStop, setEditingStop] = useState<Stop | null>(null);
+  const [isStopFormOpen, setIsStopFormOpen] = useState(false);
+  const [stopType, setStopType] = useState<Stop['type']>('PICKUP');
+  const [stopFacility, setStopFacility] = useState('');
+  const [stopAddress, setStopAddress] = useState('');
+  const [stopCity, setStopCity] = useState('');
+  const [stopState, setStopState] = useState('');
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState(load.assignedDriver?.id ?? '');
+  const [visibleFields, setVisibleFields] = useState<Set<DriverVisibleField>>(
+    () =>
+      new Set(
+        load.fieldVisibility.filter((item) => item.visibleToDriver).map((item) => item.field),
+      ),
+  );
   const [error, setError] = useState<string | null>(null);
   const [documents, setDocuments] = useState<LoadDocument[]>([]);
   const [extraction, setExtraction] = useState<DocumentExtraction | null>(null);
@@ -464,12 +496,23 @@ const ReviewDialog = ({
     };
   }, [accessToken, details.id]);
 
+  useEffect(() => {
+    void api
+      .getDrivers(accessToken)
+      .then(setDrivers)
+      .catch((requestError: unknown) => {
+        setError(errorMessage(requestError));
+      });
+  }, [accessToken]);
+
   const save = async (): Promise<void> => {
     setIsSaving(true);
     try {
       const updated = await api.updateLoad(accessToken, details.id, {
         brokerLoadNumber: brokerLoadNumber.trim() || null,
+        brokerName: brokerName.trim() || null,
         rate: rate.trim() || null,
+        equipmentType: equipmentType.trim() || null,
         specialInstructions: specialInstructions.trim() || null,
       });
       setDetails((current) => ({ ...current, ...updated }));
@@ -505,6 +548,109 @@ const ReviewDialog = ({
       setIsApplyingStops(false);
     }
   };
+  const beginStopEdit = (stop: Stop | null): void => {
+    setEditingStop(stop);
+    setIsStopFormOpen(true);
+    setStopType(stop?.type ?? 'PICKUP');
+    setStopFacility(stop?.facilityName ?? '');
+    setStopAddress(stop?.addressLine1 ?? '');
+    setStopCity(stop?.city ?? '');
+    setStopState(stop?.state ?? '');
+  };
+  const saveStop = async (): Promise<void> => {
+    if (stopFacility.trim().length === 0 && stopCity.trim().length === 0) {
+      setError('Enter at least a facility or city for the stop.');
+      return;
+    }
+    setIsSavingStop(true);
+    const input = {
+      type: stopType,
+      facilityName: stopFacility.trim() || undefined,
+      addressLine1: stopAddress.trim() || undefined,
+      city: stopCity.trim() || undefined,
+      state: stopState.trim() || undefined,
+    };
+    try {
+      const saved =
+        editingStop === null
+          ? await api.createStop(accessToken, details.id, input)
+          : await api.updateStop(accessToken, details.id, editingStop.id, input);
+      setDetails((current) => ({
+        ...current,
+        stops:
+          editingStop === null
+            ? [...current.stops, saved]
+            : current.stops.map((stop) => (stop.id === saved.id ? saved : stop)),
+      }));
+      setEditingStop(null);
+      setIsStopFormOpen(false);
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setIsSavingStop(false);
+    }
+  };
+  const removeStop = async (stopId: string): Promise<void> => {
+    try {
+      await api.deleteStop(accessToken, details.id, stopId);
+      setDetails((current) => ({
+        ...current,
+        stops: current.stops.filter((stop) => stop.id !== stopId),
+      }));
+      if (editingStop?.id === stopId) {
+        setEditingStop(null);
+        setIsStopFormOpen(false);
+      }
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
+  };
+  const moveStop = async (index: number, direction: -1 | 1): Promise<void> => {
+    const target = index + direction;
+    if (target < 0 || target >= details.stops.length) return;
+    const next = [...details.stops];
+    [next[index], next[target]] = [next[target]!, next[index]!];
+    try {
+      const reordered = await api.reorderStops(
+        accessToken,
+        details.id,
+        next.map((stop) => stop.id),
+      );
+      setDetails((current) => ({ ...current, stops: reordered }));
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
+  };
+  const assignDriver = async (): Promise<void> => {
+    if (selectedDriverId.length === 0) return;
+    setIsSaving(true);
+    try {
+      const updated = await api.assignDriver(accessToken, details.id, selectedDriverId);
+      const driver = drivers.find((item) => item.id === selectedDriverId) ?? null;
+      setDetails((current) => ({ ...current, ...updated, assignedDriver: driver }));
+      onChanged(updated);
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  const toggleVisibility = async (
+    field: DriverVisibleField,
+    visibleToDriver: boolean,
+  ): Promise<void> => {
+    try {
+      await api.setDriverFieldVisibility(accessToken, details.id, field, visibleToDriver);
+      setVisibleFields((current) => {
+        const next = new Set(current);
+        if (visibleToDriver) next.add(field);
+        else next.delete(field);
+        return next;
+      });
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
+  };
   return (
     <Dialog
       title={`Review ${details.internalLoadId ?? details.brokerLoadNumber ?? 'draft Load'}`}
@@ -522,6 +668,13 @@ const ReviewDialog = ({
         canApplyStops={details.status === 'DRAFT' && details.stops.length === 0}
         isApplyingStops={isApplyingStops}
         onApplyStops={applyStops}
+        onUseSuggestion={(field, value) => {
+          if (field === 'brokerLoadNumber') setBrokerLoadNumber(value);
+          if (field === 'brokerName') setBrokerName(value);
+          if (field === 'rate') setRate(value);
+          if (field === 'equipmentType') setEquipmentType(value);
+          if (field === 'specialInstructions') setSpecialInstructions(value);
+        }}
       />
       <div className="dialog-form">
         <label className="form-field">
@@ -534,10 +687,25 @@ const ReviewDialog = ({
           </span>
         </label>
         <label className="form-field">
+          <span className="form-label">Broker</span>
+          <span className="input-shell">
+            <input value={brokerName} onChange={(event) => setBrokerName(event.target.value)} />
+          </span>
+        </label>
+        <label className="form-field">
           <span className="form-label">Rate to customer</span>
           <span className="input-shell">
             <input value={rate} onChange={(event) => setRate(event.target.value)} />
             <strong>USD</strong>
+          </span>
+        </label>
+        <label className="form-field">
+          <span className="form-label">Equipment</span>
+          <span className="input-shell">
+            <input
+              value={equipmentType}
+              onChange={(event) => setEquipmentType(event.target.value)}
+            />
           </span>
         </label>
         <label className="form-field">
@@ -552,6 +720,42 @@ const ReviewDialog = ({
           <ShieldCheck size={17} />
           <span>Financial and internal fields remain hidden from the driver.</span>
         </div>
+        <RouteEditor
+          stops={details.stops}
+          editingStop={editingStop}
+          isFormOpen={isStopFormOpen}
+          stopType={stopType}
+          stopFacility={stopFacility}
+          stopAddress={stopAddress}
+          stopCity={stopCity}
+          stopState={stopState}
+          isSaving={isSavingStop}
+          onBeginEdit={beginStopEdit}
+          onCancel={() => {
+            setEditingStop(null);
+            setIsStopFormOpen(false);
+          }}
+          onMove={moveStop}
+          onDelete={removeStop}
+          onTypeChange={setStopType}
+          onFacilityChange={setStopFacility}
+          onAddressChange={setStopAddress}
+          onCityChange={setStopCity}
+          onStateChange={setStopState}
+          onSave={() => void saveStop()}
+        />
+        {details.status === 'CONFIRMED' ? (
+          <DriverAssignmentPanel
+            drivers={drivers}
+            selectedDriverId={selectedDriverId}
+            assignedDriver={details.assignedDriver}
+            visibleFields={visibleFields}
+            isSaving={isSaving}
+            onDriverChange={setSelectedDriverId}
+            onAssign={() => void assignDriver()}
+            onToggleVisibility={(field, visible) => void toggleVisibility(field, visible)}
+          />
+        ) : null}
         {error === null ? null : <p className="dialog-error">{error}</p>}
         <div className="dialog-actions">
           <button className="secondary-button" disabled={isSaving} onClick={() => void save()}>
@@ -573,16 +777,281 @@ const ReviewDialog = ({
   );
 };
 
+const RouteEditor = ({
+  stops,
+  editingStop,
+  isFormOpen,
+  stopType,
+  stopFacility,
+  stopAddress,
+  stopCity,
+  stopState,
+  isSaving,
+  onBeginEdit,
+  onCancel,
+  onMove,
+  onDelete,
+  onTypeChange,
+  onFacilityChange,
+  onAddressChange,
+  onCityChange,
+  onStateChange,
+  onSave,
+}: {
+  stops: Stop[];
+  editingStop: Stop | null;
+  isFormOpen: boolean;
+  stopType: Stop['type'];
+  stopFacility: string;
+  stopAddress: string;
+  stopCity: string;
+  stopState: string;
+  isSaving: boolean;
+  onBeginEdit: (stop: Stop | null) => void;
+  onCancel: () => void;
+  onMove: (index: number, direction: -1 | 1) => Promise<void>;
+  onDelete: (stopId: string) => Promise<void>;
+  onTypeChange: (type: Stop['type']) => void;
+  onFacilityChange: (value: string) => void;
+  onAddressChange: (value: string) => void;
+  onCityChange: (value: string) => void;
+  onStateChange: (value: string) => void;
+  onSave: () => void;
+}): JSX.Element => (
+  <section className="route-editor" aria-label="Route stops">
+    <div className="section-heading">
+      <div>
+        <p className="form-label">Route stops</p>
+        <small>AI suggestions are always editable before dispatch.</small>
+      </div>
+      <button className="small-action" onClick={() => onBeginEdit(null)} type="button">
+        <Plus size={15} /> Add stop
+      </button>
+    </div>
+    {stops.length === 0 ? (
+      <p className="route-empty">
+        No route stops yet. Add them manually or apply reviewed AI suggestions.
+      </p>
+    ) : null}
+    <div className="stop-list">
+      {stops.map((stop, index) => (
+        <div className="stop-row" key={stop.id}>
+          <span className={`stop-type ${stop.type.toLowerCase()}`}>
+            {stop.type === 'PICKUP' ? 'PU' : 'DL'}
+          </span>
+          <span className="stop-copy">
+            <strong>{stop.facilityName ?? 'Facility pending'}</strong>
+            <small>
+              {[stop.addressLine1, stop.city, stop.state].filter(Boolean).join(', ') ||
+                'Address pending'}
+            </small>
+          </span>
+          <span className="stop-actions">
+            <button
+              aria-label={`Move ${stop.facilityName ?? 'stop'} up`}
+              disabled={index === 0}
+              onClick={() => void onMove(index, -1)}
+              type="button"
+            >
+              <ChevronUp size={15} />
+            </button>
+            <button
+              aria-label={`Move ${stop.facilityName ?? 'stop'} down`}
+              disabled={index === stops.length - 1}
+              onClick={() => void onMove(index, 1)}
+              type="button"
+            >
+              <ChevronDown size={15} />
+            </button>
+            <button
+              aria-label={`Edit ${stop.facilityName ?? 'stop'}`}
+              onClick={() => onBeginEdit(stop)}
+              type="button"
+            >
+              <Pencil size={14} />
+            </button>
+            <button
+              aria-label={`Delete ${stop.facilityName ?? 'stop'}`}
+              onClick={() => void onDelete(stop.id)}
+              type="button"
+            >
+              <Trash2 size={14} />
+            </button>
+          </span>
+        </div>
+      ))}
+    </div>
+    {isFormOpen || stops.length === 0 ? (
+      <div className="stop-form">
+        <div className="segmented-control" aria-label="Stop type">
+          {(['PICKUP', 'DELIVERY'] as const).map((type) => (
+            <button
+              className={stopType === type ? 'active' : ''}
+              key={type}
+              onClick={() => onTypeChange(type)}
+              type="button"
+            >
+              {type === 'PICKUP' ? 'Pickup' : 'Delivery'}
+            </button>
+          ))}
+        </div>
+        <label className="form-field">
+          <span className="form-label">Facility</span>
+          <span className="input-shell">
+            <input
+              value={stopFacility}
+              onChange={(event) => onFacilityChange(event.target.value)}
+              placeholder="Warehouse or customer"
+            />
+          </span>
+        </label>
+        <label className="form-field">
+          <span className="form-label">Address</span>
+          <span className="input-shell">
+            <input
+              value={stopAddress}
+              onChange={(event) => onAddressChange(event.target.value)}
+              placeholder="Street address"
+            />
+          </span>
+        </label>
+        <div className="stop-form-location">
+          <label className="form-field">
+            <span className="form-label">City</span>
+            <span className="input-shell">
+              <input value={stopCity} onChange={(event) => onCityChange(event.target.value)} />
+            </span>
+          </label>
+          <label className="form-field">
+            <span className="form-label">State</span>
+            <span className="input-shell">
+              <input value={stopState} onChange={(event) => onStateChange(event.target.value)} />
+            </span>
+          </label>
+        </div>
+        <div className="route-form-actions">
+          {isFormOpen ? (
+            <button className="secondary-button" onClick={onCancel} type="button">
+              Cancel
+            </button>
+          ) : null}
+          <button
+            className="small-action primary"
+            disabled={isSaving}
+            onClick={onSave}
+            type="button"
+          >
+            {isSaving ? 'Saving…' : editingStop === null ? 'Add stop' : 'Save stop'}
+          </button>
+        </div>
+      </div>
+    ) : null}
+  </section>
+);
+
+const driverFieldLabels: Record<DriverVisibleField, string> = {
+  brokerLoadNumber: 'Broker load number',
+  brokerName: 'Broker name',
+  commodity: 'Commodity',
+  weight: 'Weight',
+  pieces: 'Pieces',
+  equipmentType: 'Equipment',
+  temperatureRequirements: 'Temperature requirements',
+  specialInstructions: 'Special instructions',
+  trackingRequirements: 'Tracking requirements',
+  podRequirements: 'POD requirements',
+  requiredDocuments: 'Required documents',
+};
+
+const DriverAssignmentPanel = ({
+  drivers,
+  selectedDriverId,
+  assignedDriver,
+  visibleFields,
+  isSaving,
+  onDriverChange,
+  onAssign,
+  onToggleVisibility,
+}: {
+  drivers: Driver[];
+  selectedDriverId: string;
+  assignedDriver: Driver | null;
+  visibleFields: Set<DriverVisibleField>;
+  isSaving: boolean;
+  onDriverChange: (id: string) => void;
+  onAssign: () => void;
+  onToggleVisibility: (field: DriverVisibleField, visible: boolean) => void;
+}): JSX.Element => (
+  <section className="driver-assignment">
+    <div className="section-heading">
+      <div>
+        <p className="form-label">Driver handoff</p>
+        <small>
+          {assignedDriver === null
+            ? 'Assign this confirmed load to a driver.'
+            : `Assigned to ${assignedDriver.fullName}.`}
+        </small>
+      </div>
+    </div>
+    <div className="assignment-row">
+      <span className="input-shell">
+        <select
+          aria-label="Assigned driver"
+          value={selectedDriverId}
+          onChange={(event) => onDriverChange(event.target.value)}
+        >
+          <option value="">Select a driver</option>
+          {drivers.map((driver) => (
+            <option key={driver.id} value={driver.id}>
+              {driver.fullName} · {driver.email}
+            </option>
+          ))}
+        </select>
+      </span>
+      <button
+        className="small-action primary"
+        disabled={isSaving || selectedDriverId.length === 0}
+        onClick={onAssign}
+        type="button"
+      >
+        Assign
+      </button>
+    </div>
+    {drivers.length === 0 ? (
+      <p className="route-empty">
+        No driver accounts are available yet. Create a DRIVER user through the API.
+      </p>
+    ) : null}
+    <div className="visibility-grid">
+      {driverVisibleFields.map((field) => (
+        <label key={field}>
+          <input
+            checked={visibleFields.has(field)}
+            onChange={(event) => onToggleVisibility(field, event.target.checked)}
+            type="checkbox"
+          />{' '}
+          {driverFieldLabels[field]}
+        </label>
+      ))}
+    </div>
+  </section>
+);
+
 const ExtractionPanel = ({
   extraction,
   canApplyStops,
   isApplyingStops,
   onApplyStops,
+  onUseSuggestion,
 }: {
   extraction: DocumentExtraction | null;
   canApplyStops: boolean;
   isApplyingStops: boolean;
   onApplyStops: () => Promise<void>;
+  onUseSuggestion: (
+    field: 'brokerLoadNumber' | 'brokerName' | 'rate' | 'equipmentType' | 'specialInstructions',
+    value: string,
+  ) => void;
 }): JSX.Element => {
   if (extraction === null)
     return (
@@ -615,9 +1084,23 @@ const ExtractionPanel = ({
         <small>Review before saving</small>
       </div>
       <div className="confidence-grid">
-        <ConfidenceField label="Broker" field={extraction.result.brokerName} />
-        <ConfidenceField label="Rate" field={extraction.result.rate} />
-        <ConfidenceField label="Equipment" field={extraction.result.equipmentType} />
+        <ConfidenceField
+          label="Broker"
+          field={extraction.result.brokerName}
+          onUse={() => onUseSuggestion('brokerName', extraction.result?.brokerName.value ?? '')}
+        />
+        <ConfidenceField
+          label="Rate"
+          field={extraction.result.rate}
+          onUse={() => onUseSuggestion('rate', extraction.result?.rate.value ?? '')}
+        />
+        <ConfidenceField
+          label="Equipment"
+          field={extraction.result.equipmentType}
+          onUse={() =>
+            onUseSuggestion('equipmentType', extraction.result?.equipmentType.value ?? '')
+          }
+        />
       </div>
       <div className="stops-suggestion">
         <span>
@@ -646,14 +1129,21 @@ const ExtractionPanel = ({
 const ConfidenceField = ({
   label,
   field,
+  onUse,
 }: {
   label: string;
   field: { value: string | null; confidence: string };
+  onUse: () => void;
 }): JSX.Element => (
   <div className="confidence-field">
     <span>{label}</span>
     <strong>{field.value ?? 'Not found'}</strong>
     <small className={field.confidence.toLowerCase()}>{field.confidence.replace('_', ' ')}</small>
+    {field.value === null ? null : (
+      <button onClick={onUse} type="button">
+        Use
+      </button>
+    )}
   </div>
 );
 

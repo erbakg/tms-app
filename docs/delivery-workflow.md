@@ -6,7 +6,7 @@
 2. Реализовать минимальное изменение, при котором тест проходит.
 3. Рефакторить, пока полный набор тестов остаётся зелёным.
 
-GitHub Actions запускает coverage unit-тестов, integration-тесты PostgreSQL, e2e-тесты, ESLint, проверку Prettier, проверку типов TypeScript и production build для pull request и push в `main`.
+GitHub Actions запускает coverage unit-тестов, integration-тесты PostgreSQL, e2e-тесты API, браузерный Playwright-сценарий админки, ESLint, проверку Prettier, проверку типов TypeScript и production build для pull request и push в `main`. Браузерный сценарий покрывает вход, поиск, review, контролируемое применение AI stops, ручное изменение и перестановку route, подтверждение, назначение driver и upload RC.
 
 Используйте узконаправленные ветки, например `feat/persist-load-drafts`, и conventional commit subjects, например `feat(api): persist load drafts`.
 

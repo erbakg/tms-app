@@ -1,12 +1,13 @@
 import { ConflictException, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 
-import type { AuthUser, AuthenticatedUser, UserRole } from './auth.types.js';
+import type { AuthUser, AuthenticatedUser, DirectoryUser, UserRole } from './auth.types.js';
 import { JwtService } from './jwt.service.js';
 import { PasswordService } from './password.service.js';
 
 export interface AuthUserRepository {
   create(input: Omit<AuthUser, 'id'>): Promise<AuthUser>;
   findByEmail(email: string): Promise<AuthUser | null>;
+  findByRole(role: UserRole): Promise<DirectoryUser[]>;
 }
 
 export const AUTH_USER_REPOSITORY = Symbol('AUTH_USER_REPOSITORY');
@@ -52,5 +53,9 @@ export class AuthService {
 
     const authenticatedUser = { id: user.id, email: user.email, role: user.role };
     return { accessToken: this.jwt.sign(authenticatedUser), user: authenticatedUser };
+  }
+
+  listUsersByRole(role: UserRole): Promise<DirectoryUser[]> {
+    return this.users.findByRole(role);
   }
 }

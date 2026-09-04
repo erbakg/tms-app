@@ -25,7 +25,9 @@ export interface Load {
 export interface Stop {
   id: string;
   type: 'PICKUP' | 'DELIVERY';
+  position: number;
   facilityName: string | null;
+  addressLine1: string | null;
   city: string | null;
   state: string | null;
   appointmentAt: string | null;
@@ -33,7 +35,32 @@ export interface Stop {
 
 export interface LoadDetails extends Load {
   stops: Stop[];
+  assignedDriver: Driver | null;
+  fieldVisibility: Array<{ field: DriverVisibleField; visibleToDriver: boolean }>;
 }
+
+export interface Driver {
+  id: string;
+  email: string;
+  fullName: string;
+  role: 'DRIVER';
+}
+
+export const driverVisibleFields = [
+  'brokerLoadNumber',
+  'brokerName',
+  'commodity',
+  'weight',
+  'pieces',
+  'equipmentType',
+  'temperatureRequirements',
+  'specialInstructions',
+  'trackingRequirements',
+  'podRequirements',
+  'requiredDocuments',
+] as const;
+
+export type DriverVisibleField = (typeof driverVisibleFields)[number];
 
 export interface LoadDocument {
   id: string;
@@ -89,6 +116,7 @@ const request = async <T>(
     const error = (await response.json().catch(() => ({}))) as ApiFailure;
     throw new Error(error.code ?? error.message ?? `Request failed with ${response.status}.`);
   }
+  if (response.status === 204) return undefined as T;
   return response.json() as Promise<T>;
 };
 
@@ -100,6 +128,8 @@ export const api = {
       body: JSON.stringify({ email, password }),
     }),
   getLoads: (accessToken: string): Promise<Load[]> => request('/loads', {}, accessToken),
+  getDrivers: (accessToken: string): Promise<Driver[]> =>
+    request('/users?role=DRIVER', {}, accessToken),
   getLoad: (accessToken: string, loadId: string): Promise<LoadDetails> =>
     request(`/loads/${loadId}`, {}, accessToken),
   getDocuments: (accessToken: string, loadId: string): Promise<LoadDocument[]> =>
@@ -119,7 +149,10 @@ export const api = {
   updateLoad: (
     accessToken: string,
     loadId: string,
-    input: Pick<Load, 'brokerLoadNumber' | 'rate' | 'specialInstructions'>,
+    input: Pick<
+      Load,
+      'brokerLoadNumber' | 'brokerName' | 'rate' | 'equipmentType' | 'specialInstructions'
+    >,
   ): Promise<Load> =>
     request(
       `/loads/${loadId}`,
@@ -132,6 +165,84 @@ export const api = {
     ),
   confirmLoad: (accessToken: string, loadId: string): Promise<Load> =>
     request(`/loads/${loadId}/confirm`, { method: 'POST' }, accessToken),
+  assignDriver: (accessToken: string, loadId: string, driverId: string): Promise<Load> =>
+    request(
+      `/loads/${loadId}/assign-driver`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ driverId }),
+      },
+      accessToken,
+    ),
+  setDriverFieldVisibility: (
+    accessToken: string,
+    loadId: string,
+    field: DriverVisibleField,
+    visibleToDriver: boolean,
+  ): Promise<void> =>
+    request(
+      `/loads/${loadId}/field-visibility`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ field, visibleToDriver }),
+      },
+      accessToken,
+    ),
+  createStop: (
+    accessToken: string,
+    loadId: string,
+    input: {
+      type: Stop['type'];
+      facilityName?: string;
+      addressLine1?: string;
+      city?: string;
+      state?: string;
+    },
+  ): Promise<Stop> =>
+    request(
+      `/loads/${loadId}/stops`,
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      },
+      accessToken,
+    ),
+  updateStop: (
+    accessToken: string,
+    loadId: string,
+    stopId: string,
+    input: {
+      type?: Stop['type'];
+      facilityName?: string;
+      addressLine1?: string;
+      city?: string;
+      state?: string;
+    },
+  ): Promise<Stop> =>
+    request(
+      `/loads/${loadId}/stops/${stopId}`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      },
+      accessToken,
+    ),
+  deleteStop: (accessToken: string, loadId: string, stopId: string): Promise<void> =>
+    request(`/loads/${loadId}/stops/${stopId}`, { method: 'DELETE' }, accessToken),
+  reorderStops: (accessToken: string, loadId: string, stopIds: string[]): Promise<Stop[]> =>
+    request(
+      `/loads/${loadId}/stops/reorder`,
+      {
+        method: 'PATCH',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ stopIds }),
+      },
+      accessToken,
+    ),
   uploadRateConfirmation: (
     accessToken: string,
     file: File,
