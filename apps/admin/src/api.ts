@@ -35,6 +35,37 @@ export interface LoadDetails extends Load {
   stops: Stop[];
 }
 
+export interface LoadDocument {
+  id: string;
+  version: number;
+  isCurrent: boolean;
+  filename: string;
+  createdAt: string;
+}
+
+export interface ExtractedText {
+  value: string | null;
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW' | 'NOT_FOUND';
+}
+
+export interface DocumentExtraction {
+  status: 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+  result: {
+    brokerName: ExtractedText;
+    brokerLoadNumber: ExtractedText;
+    rate: ExtractedText;
+    commodity: ExtractedText;
+    equipmentType: ExtractedText;
+    specialInstructions: ExtractedText;
+    stops: Array<{
+      type: 'PICKUP' | 'DELIVERY';
+      facilityName: ExtractedText;
+      address: ExtractedText;
+    }>;
+  } | null;
+  error: string | null;
+}
+
 interface ApiFailure {
   message?: string;
   code?: string;
@@ -71,6 +102,20 @@ export const api = {
   getLoads: (accessToken: string): Promise<Load[]> => request('/loads', {}, accessToken),
   getLoad: (accessToken: string, loadId: string): Promise<LoadDetails> =>
     request(`/loads/${loadId}`, {}, accessToken),
+  getDocuments: (accessToken: string, loadId: string): Promise<LoadDocument[]> =>
+    request(`/loads/${loadId}/documents`, {}, accessToken),
+  getExtraction: (
+    accessToken: string,
+    loadId: string,
+    documentId: string,
+  ): Promise<DocumentExtraction> =>
+    request(`/loads/${loadId}/documents/${documentId}/extraction`, {}, accessToken),
+  applyExtractedStops: (accessToken: string, loadId: string, documentId: string): Promise<Stop[]> =>
+    request(
+      `/loads/${loadId}/documents/${documentId}/extraction/apply-stops`,
+      { method: 'POST' },
+      accessToken,
+    ),
   updateLoad: (
     accessToken: string,
     loadId: string,

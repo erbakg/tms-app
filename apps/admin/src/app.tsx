@@ -18,7 +18,7 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 
 import { api } from './api.js';
-import type { Load, LoadDetails, Session } from './api.js';
+import type { DocumentExtraction, Load, LoadDetails, LoadDocument, Session } from './api.js';
 
 const navItems = [
   { label: 'Dispatch', icon: ClipboardCheck },
@@ -427,21 +427,53 @@ const ReviewDialog = ({
   onClose: () => void;
   onChanged: (load: Load) => void;
 }): JSX.Element => {
+  const [details, setDetails] = useState(load);
   const [brokerLoadNumber, setBrokerLoadNumber] = useState(load.brokerLoadNumber ?? '');
   const [rate, setRate] = useState(load.rate ?? '');
   const [specialInstructions, setSpecialInstructions] = useState(load.specialInstructions ?? '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isApplyingStops, setIsApplyingStops] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [documents, setDocuments] = useState<LoadDocument[]>([]);
+  const [extraction, setExtraction] = useState<DocumentExtraction | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const loadExtraction = async (): Promise<void> => {
+      try {
+        const currentDocuments = await api.getDocuments(accessToken, details.id);
+        if (!active) return;
+        setDocuments(currentDocuments);
+        const document = currentDocuments.find((item) => item.isCurrent);
+        if (document === undefined) return;
+        const currentExtraction = await api.getExtraction(accessToken, details.id, document.id);
+        if (!active) return;
+        setExtraction(currentExtraction);
+        if (currentExtraction.status === 'PENDING' || currentExtraction.status === 'PROCESSING') {
+          retryTimer = setTimeout(() => void loadExtraction(), 2_500);
+        }
+      } catch (requestError) {
+        if (active) setError(errorMessage(requestError));
+      }
+    };
+    void loadExtraction();
+    return () => {
+      active = false;
+      if (retryTimer !== undefined) clearTimeout(retryTimer);
+    };
+  }, [accessToken, details.id]);
+
   const save = async (): Promise<void> => {
     setIsSaving(true);
     try {
-      onChanged(
-        await api.updateLoad(accessToken, load.id, {
-          brokerLoadNumber: brokerLoadNumber.trim() || null,
-          rate: rate.trim() || null,
-          specialInstructions: specialInstructions.trim() || null,
-        }),
-      );
+      const updated = await api.updateLoad(accessToken, details.id, {
+        brokerLoadNumber: brokerLoadNumber.trim() || null,
+        rate: rate.trim() || null,
+        specialInstructions: specialInstructions.trim() || null,
+      });
+      setDetails((current) => ({ ...current, ...updated }));
+      onChanged(updated);
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
@@ -451,25 +483,46 @@ const ReviewDialog = ({
   const confirm = async (): Promise<void> => {
     setIsSaving(true);
     try {
-      onChanged(await api.confirmLoad(accessToken, load.id));
+      const updated = await api.confirmLoad(accessToken, details.id);
+      setDetails((current) => ({ ...current, ...updated }));
+      onChanged(updated);
     } catch (requestError) {
       setError(errorMessage(requestError));
     } finally {
       setIsSaving(false);
     }
   };
+  const applyStops = async (): Promise<void> => {
+    const document = documents.find((item) => item.isCurrent);
+    if (document === undefined) return;
+    setIsApplyingStops(true);
+    try {
+      const stops = await api.applyExtractedStops(accessToken, details.id, document.id);
+      setDetails((current) => ({ ...current, stops }));
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    } finally {
+      setIsApplyingStops(false);
+    }
+  };
   return (
     <Dialog
-      title={`Review ${load.internalLoadId ?? load.brokerLoadNumber ?? 'draft Load'}`}
+      title={`Review ${details.internalLoadId ?? details.brokerLoadNumber ?? 'draft Load'}`}
       onClose={onClose}
     >
       <div className="review-dialog-route">
-        {load.stops.length === 0
+        {details.stops.length === 0
           ? 'Stops will appear after AI extraction or manual review.'
-          : load.stops
+          : details.stops
               .map((stop) => `${stop.type}: ${stop.facilityName ?? stop.city ?? 'Pending'}`)
               .join(' → ')}
       </div>
+      <ExtractionPanel
+        extraction={extraction}
+        canApplyStops={details.status === 'DRAFT' && details.stops.length === 0}
+        isApplyingStops={isApplyingStops}
+        onApplyStops={applyStops}
+      />
       <div className="dialog-form">
         <label className="form-field">
           <span className="form-label">Broker load number</span>
@@ -504,7 +557,7 @@ const ReviewDialog = ({
           <button className="secondary-button" disabled={isSaving} onClick={() => void save()}>
             Save review
           </button>
-          {load.status === 'DRAFT' ? (
+          {details.status === 'DRAFT' ? (
             <button className="primary-button" disabled={isSaving} onClick={() => void confirm()}>
               {isSaving ? (
                 <LoaderCircle className="spinner" size={19} />
@@ -519,6 +572,90 @@ const ReviewDialog = ({
     </Dialog>
   );
 };
+
+const ExtractionPanel = ({
+  extraction,
+  canApplyStops,
+  isApplyingStops,
+  onApplyStops,
+}: {
+  extraction: DocumentExtraction | null;
+  canApplyStops: boolean;
+  isApplyingStops: boolean;
+  onApplyStops: () => Promise<void>;
+}): JSX.Element => {
+  if (extraction === null)
+    return (
+      <div className="extraction-panel loading">
+        <LoaderCircle className="spinner" size={17} /> Loading AI extraction…
+      </div>
+    );
+  if (extraction.status === 'PENDING' || extraction.status === 'PROCESSING')
+    return (
+      <div className="extraction-panel loading">
+        <LoaderCircle className="spinner" size={17} /> AI extraction is in progress. This page
+        refreshes automatically.
+      </div>
+    );
+  if (extraction.status === 'FAILED')
+    return (
+      <div className="extraction-panel failed">
+        <strong>AI extraction failed</strong>
+        <span>{extraction.error ?? 'The document could not be processed.'}</span>
+      </div>
+    );
+  if (extraction.result === null)
+    return <div className="extraction-panel failed">AI completed without a result.</div>;
+  return (
+    <section className="extraction-panel">
+      <div className="extraction-heading">
+        <span>
+          <ShieldCheck size={16} /> AI suggestions
+        </span>
+        <small>Review before saving</small>
+      </div>
+      <div className="confidence-grid">
+        <ConfidenceField label="Broker" field={extraction.result.brokerName} />
+        <ConfidenceField label="Rate" field={extraction.result.rate} />
+        <ConfidenceField label="Equipment" field={extraction.result.equipmentType} />
+      </div>
+      <div className="stops-suggestion">
+        <span>
+          {extraction.result.stops.length} suggested stop
+          {extraction.result.stops.length === 1 ? '' : 's'}
+        </span>
+        {canApplyStops && extraction.result.stops.length > 0 ? (
+          <button
+            className="secondary-button"
+            disabled={isApplyingStops}
+            onClick={() => void onApplyStops()}
+          >
+            {isApplyingStops ? (
+              <LoaderCircle className="spinner" size={16} />
+            ) : (
+              <MapPin size={16} />
+            )}{' '}
+            Apply AI stops
+          </button>
+        ) : null}
+      </div>
+    </section>
+  );
+};
+
+const ConfidenceField = ({
+  label,
+  field,
+}: {
+  label: string;
+  field: { value: string | null; confidence: string };
+}): JSX.Element => (
+  <div className="confidence-field">
+    <span>{label}</span>
+    <strong>{field.value ?? 'Not found'}</strong>
+    <small className={field.confidence.toLowerCase()}>{field.confidence.replace('_', ' ')}</small>
+  </div>
+);
 
 const Dialog = ({
   title,

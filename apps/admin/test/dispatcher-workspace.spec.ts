@@ -16,6 +16,7 @@ const draftLoad = {
 test('signs in, searches, reviews, confirms, and uploads a rate confirmation', async ({ page }) => {
   let wasPatched = false;
   let wasConfirmed = false;
+  let wereStopsApplied = false;
 
   await page.route('**/auth/login', async (route) => {
     await route.fulfill({
@@ -42,6 +43,73 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
     wasPatched = true;
     await route.fulfill({
       json: { ...draftLoad, brokerLoadNumber: 'DRAFT-42-UPDATED', rate: '1250.00' },
+    });
+  });
+  await page.route('**/loads/load-1/documents', async (route) => {
+    await route.fulfill({
+      json: [
+        {
+          id: 'document-1',
+          version: 1,
+          isCurrent: true,
+          filename: 'rate-confirmation.pdf',
+          createdAt: '2026-09-04T01:00:00.000Z',
+        },
+      ],
+    });
+  });
+  await page.route('**/loads/load-1/documents/document-1/extraction', async (route) => {
+    if (route.request().method() === 'POST') {
+      wereStopsApplied = true;
+      await route.fulfill({
+        json: [
+          {
+            id: 'stop-1',
+            type: 'PICKUP',
+            facilityName: 'Origin Warehouse',
+            city: 'Dallas',
+            state: 'TX',
+            appointmentAt: null,
+          },
+        ],
+      });
+      return;
+    }
+    await route.fulfill({
+      json: {
+        status: 'COMPLETED',
+        error: null,
+        result: {
+          brokerName: { value: 'C.H. Robinson', confidence: 'HIGH' },
+          brokerLoadNumber: { value: 'DRAFT-42', confidence: 'HIGH' },
+          rate: { value: '$1,200.00', confidence: 'HIGH' },
+          commodity: { value: 'Paper products', confidence: 'HIGH' },
+          equipmentType: { value: "53' Dry Van", confidence: 'HIGH' },
+          specialInstructions: { value: null, confidence: 'NOT_FOUND' },
+          stops: [
+            {
+              type: 'PICKUP',
+              facilityName: { value: 'Origin Warehouse', confidence: 'HIGH' },
+              address: { value: '100 Origin Ave, Dallas, TX', confidence: 'HIGH' },
+            },
+          ],
+        },
+      },
+    });
+  });
+  await page.route('**/loads/load-1/documents/document-1/extraction/apply-stops', async (route) => {
+    wereStopsApplied = true;
+    await route.fulfill({
+      json: [
+        {
+          id: 'stop-1',
+          type: 'PICKUP',
+          facilityName: 'Origin Warehouse',
+          city: 'Dallas',
+          state: 'TX',
+          appointmentAt: null,
+        },
+      ],
     });
   });
   await page.route('**/loads/rate-confirmations', async (route) => {
@@ -72,6 +140,10 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   await page.getByRole('button', { name: /DRAFT-42/ }).click();
 
   await expect(page.getByRole('dialog', { name: 'Review DRAFT-42' })).toBeVisible();
+  await expect(page.getByText('AI suggestions')).toBeVisible();
+  await page.getByRole('button', { name: 'Apply AI stops' }).click();
+  await expect.poll(() => wereStopsApplied).toBe(true);
+  await expect(page.getByText('PICKUP: Origin Warehouse')).toBeVisible();
   await page.getByLabel('Broker load number').fill('DRAFT-42-UPDATED');
   await page.getByLabel('Rate to customer').fill('1250.00');
   await page.getByRole('button', { name: 'Save review' }).click();

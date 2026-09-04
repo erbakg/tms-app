@@ -24,4 +24,6 @@ pnpm --filter @312kg/admin dev
 
 Админка сохраняет JWT только в `sessionStorage` текущей вкладки. После входа загружает очередь через `GET /loads`; поиск фильтрует полученные Loads на клиенте. Кнопка upload открывает форму и отправляет файл в `POST /loads/rate-confirmations`. Карточка или строка Load открывает review: можно сохранить номер брокера, rate и internal instructions, а черновик подтвердить.
 
+В review админка запрашивает current RC и его extraction. Пока AI работает, статус обновляется автоматически. При `COMPLETED` показываются confidence для ключевых полей и отдельная кнопка `Apply AI stops`. Она доступна только у черновика без stops и вызывает `POST /loads/:loadId/documents/:documentId/extraction/apply-stops`; AI никогда не создаёт маршрут сам.
+
 По умолчанию Vite-клиент использует API `http://localhost:3100`. Для другого окружения передайте `VITE_API_URL`. Backend разрешает CORS; в production задайте через `CORS_ORIGIN` точный список доменов через запятую.

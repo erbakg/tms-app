@@ -783,6 +783,106 @@ h1 span {
   font-size: 12px;
   line-height: 1.5;
 }
+.extraction-panel {
+  display: grid;
+  gap: 12px;
+  margin: 0 0 18px;
+  padding: 14px;
+  border: 1px solid #c9dcff;
+  border-radius: var(--radius-sm);
+  background: #f5f8ff;
+}
+.extraction-panel.loading {
+  display: flex;
+  align-items: center;
+  color: var(--color-blue-700);
+  font-size: 12px;
+  font-weight: 700;
+}
+.extraction-panel.failed {
+  color: #b3374c;
+  border-color: #ffc6d0;
+  background: #fff1f3;
+  font-size: 12px;
+}
+.extraction-panel.failed span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.extraction-heading,
+.stops-suggestion {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.extraction-heading > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--color-blue-700);
+  font-size: 12px;
+  font-weight: 800;
+}
+.extraction-heading small,
+.stops-suggestion > span {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 650;
+}
+.confidence-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.confidence-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 9px;
+  border-radius: 8px;
+  background: white;
+}
+.confidence-field > span {
+  color: var(--color-slate-600);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.confidence-field strong {
+  overflow: hidden;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.confidence-field small {
+  font-size: 9px;
+  font-weight: 750;
+  text-transform: capitalize;
+}
+.confidence-field small.high {
+  color: var(--color-green-700);
+}
+.confidence-field small.medium {
+  color: var(--color-amber-600);
+}
+.confidence-field small.low,
+.confidence-field small.not_found {
+  color: var(--color-slate-400);
+}
+.stops-suggestion .secondary-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--color-blue-700);
+  border-color: #b8d2ff;
+  background: white;
+  font-size: 11px;
+}
 textarea {
   min-height: 82px;
   padding: 11px 12px;
@@ -930,6 +1030,9 @@ textarea:focus {
     display: none;
   }
   .review-form {
+    grid-template-columns: 1fr;
+  }
+  .confidence-grid {
     grid-template-columns: 1fr;
   }
   .route-summary {
