@@ -21,6 +21,7 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
   let wasStopCreated = false;
   let wasStopsReordered = false;
   let wasDriverAssigned = false;
+  let wasDocumentViewed = false;
   const baseDetails = { assignedDriver: null, fieldVisibility: [] };
 
   await page.route('**/auth/login', async (route) => {
@@ -70,6 +71,7 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
           version: 1,
           isCurrent: true,
           filename: 'rate-confirmation.pdf',
+          mimeType: 'application/pdf',
           createdAt: '2026-09-04T01:00:00.000Z',
         },
       ],
@@ -130,6 +132,10 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
         },
       ],
     });
+  });
+  await page.route('**/loads/load-1/documents/document-1/download', async (route) => {
+    wasDocumentViewed = true;
+    await route.fulfill({ json: { url: 'https://storage.example/rate-confirmation.pdf' } });
   });
   await page.route('**/loads/load-1/stops/stop-1', async (route) => {
     if (route.request().method() === 'PATCH') {
@@ -236,6 +242,8 @@ test('signs in, searches, reviews, confirms, and uploads a rate confirmation', a
 
   await expect(page.getByRole('dialog', { name: 'Review DRAFT-42' })).toBeVisible();
   await expect(page.getByText('AI suggestions', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'View', exact: true }).click();
+  await expect.poll(() => wasDocumentViewed).toBe(true);
   await page.getByRole('button', { name: 'Apply AI stops' }).click();
   await expect.poll(() => wereStopsApplied).toBe(true);
   await expect(page.getByText('PICKUP: Origin Warehouse')).toBeVisible();

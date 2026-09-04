@@ -893,6 +893,7 @@ h1 span {
   font-size: 11px;
 }
 .route-editor,
+.document-history,
 .driver-assignment {
   display: grid;
   gap: 12px;
@@ -904,6 +905,46 @@ h1 span {
 .driver-assignment {
   border-color: #ccebdd;
   background: #f4fffa;
+}
+.document-history {
+  margin: 0 0 18px;
+}
+.document-list {
+  display: grid;
+  gap: 7px;
+}
+.document-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 9px;
+  color: var(--color-blue-700);
+  border: 1px solid #d9e5f5;
+  border-radius: 9px;
+  background: white;
+}
+.document-row > span {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+  gap: 2px;
+  color: var(--text-primary);
+}
+.document-row strong,
+.document-row small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.document-row strong {
+  font-size: 11px;
+}
+.document-row small {
+  color: var(--text-secondary);
+  font-size: 10px;
+}
+.document-row .small-action {
+  min-height: 29px;
 }
 .section-heading {
   display: flex;

@@ -67,6 +67,7 @@ export interface LoadDocument {
   version: number;
   isCurrent: boolean;
   filename: string;
+  mimeType: string;
   createdAt: string;
 }
 
@@ -134,6 +135,12 @@ export const api = {
     request(`/loads/${loadId}`, {}, accessToken),
   getDocuments: (accessToken: string, loadId: string): Promise<LoadDocument[]> =>
     request(`/loads/${loadId}/documents`, {}, accessToken),
+  getDocumentDownloadUrl: (
+    accessToken: string,
+    loadId: string,
+    documentId: string,
+  ): Promise<{ url: string }> =>
+    request(`/loads/${loadId}/documents/${documentId}/download`, {}, accessToken),
   getExtraction: (
     accessToken: string,
     loadId: string,

@@ -548,6 +548,14 @@ const ReviewDialog = ({
       setIsApplyingStops(false);
     }
   };
+  const viewDocument = async (document: LoadDocument): Promise<void> => {
+    try {
+      const { url } = await api.getDocumentDownloadUrl(accessToken, details.id, document.id);
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (requestError) {
+      setError(errorMessage(requestError));
+    }
+  };
   const beginStopEdit = (stop: Stop | null): void => {
     setEditingStop(stop);
     setIsStopFormOpen(true);
@@ -676,6 +684,7 @@ const ReviewDialog = ({
           if (field === 'specialInstructions') setSpecialInstructions(value);
         }}
       />
+      <DocumentHistory documents={documents} onView={(document) => void viewDocument(document)} />
       <div className="dialog-form">
         <label className="form-field">
           <span className="form-label">Broker load number</span>
@@ -948,6 +957,40 @@ const RouteEditor = ({
     ) : null}
   </section>
 );
+
+const DocumentHistory = ({
+  documents,
+  onView,
+}: {
+  documents: LoadDocument[];
+  onView: (document: LoadDocument) => void;
+}): JSX.Element | null =>
+  documents.length === 0 ? null : (
+    <section className="document-history" aria-label="Rate Confirmation versions">
+      <div className="section-heading">
+        <div>
+          <p className="form-label">Rate Confirmation</p>
+          <small>Original files remain available for review.</small>
+        </div>
+      </div>
+      <div className="document-list">
+        {documents.map((document) => (
+          <div className="document-row" key={document.id}>
+            <FileUp size={16} />
+            <span>
+              <strong>{document.filename}</strong>
+              <small>
+                Version {document.version} · {document.isCurrent ? 'Current' : 'Replaced'}
+              </small>
+            </span>
+            <button className="small-action" onClick={() => onView(document)} type="button">
+              View
+            </button>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 
 const driverFieldLabels: Record<DriverVisibleField, string> = {
   brokerLoadNumber: 'Broker load number',
