@@ -1,12 +1,15 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { UserRole, type PrismaClient } from '@prisma/client';
 
 import { PrismaService } from '../../database/prisma.service.js';
 import type {
   Load,
+  LoadCommodity,
   LoadDetails,
   LoadRepository,
   DriverLoad,
+  CreateManualLoadInput,
   DriverVisibleField,
   UpdateLoadInput,
 } from '../application/load.service.js';
@@ -30,11 +33,85 @@ export class PrismaLoadRepository implements LoadRepository {
     return this.toLoad(stored);
   }
 
+  async createManual(input: CreateManualLoadInput): Promise<Load> {
+    return this.prisma.$transaction(async (transaction) => {
+      let sequenceNumber: number | undefined;
+      if (!input.saveAsDraft) {
+        const sequence = await transaction.$queryRaw<Array<{ value: bigint }>>`
+          SELECT nextval('"Load_sequenceNumber_seq"') AS value
+        `;
+        sequenceNumber = Number(sequence[0]?.value);
+      }
+
+      const stored = await transaction.load.create({
+        data: {
+          brokerLoadNumber: input.brokerLoadNumber ?? null,
+          brokerName: input.customerName ?? null,
+          customerName: input.customerName ?? null,
+          billTo: input.billTo ?? null,
+          operatingCompany: input.operatingCompany ?? null,
+          enteredByUserId: input.enteredByUserId,
+          enteredByName: input.enteredByName,
+          bookedByName: input.bookedByName ?? null,
+          bookedForTeam: input.bookedForTeam ?? null,
+          bolNumber: input.bolNumber ?? null,
+          pickupNumber: input.pickupNumber ?? null,
+          poNumber: input.poNumber ?? null,
+          consigneeReference: input.consigneeReference ?? null,
+          equipmentType: input.equipmentType ?? null,
+          preloadedTrailer: input.preloadedTrailer,
+          preloadedTrailerNumber: input.preloadedTrailerNumber ?? null,
+          rate: input.rate ?? null,
+          commodity: input.commodities[0]?.commodity || null,
+          weight: input.commodities[0]?.weight || null,
+          pieces:
+            input.commodities[0]?.units === undefined ? null : String(input.commodities[0].units),
+          driverPayAmount: input.driverPayAmount ?? null,
+          driverPayMethod: input.driverPayMethod ?? null,
+          internalLoadId: sequenceNumber === undefined ? null : `312KG-${sequenceNumber}`,
+          sequenceNumber: sequenceNumber ?? null,
+          status: input.saveAsDraft ? 'DRAFT' : 'CONFIRMED',
+          stops: {
+            create: input.stops.map((stop, index) => ({
+              position: index + 1,
+              type: stop.type,
+              facilityName: stop.facilityName,
+              addressLine1: stop.addressLine1,
+              city: stop.city,
+              state: stop.state,
+              postalCode: stop.postalCode,
+              appointmentType: stop.appointmentType,
+              appointmentStartAt: stop.appointmentStartAt ?? null,
+              appointmentEndAt: stop.appointmentEndAt ?? null,
+              appointmentAt: stop.appointmentAt ?? null,
+              instructions: stop.instructions ?? null,
+            })),
+          },
+          commodities: {
+            create: input.commodities.map((commodity) => ({
+              id: randomUUID(),
+              fromPosition: commodity.fromPosition,
+              toPosition: commodity.toPosition,
+              commodity: commodity.commodity,
+              description: commodity.description ?? null,
+              weight: commodity.weight ?? null,
+              units: commodity.units ?? null,
+              pallets: commodity.pallets ?? null,
+            })),
+          },
+        },
+      });
+
+      return this.toLoad(stored);
+    });
+  }
+
   async findById(id: string): Promise<LoadDetails | null> {
     const stored = await this.prisma.load.findUnique({
       where: { id },
       include: {
         stops: { orderBy: { position: 'asc' } },
+        commodities: { orderBy: { createdAt: 'asc' } },
         assignedDriver: { select: { id: true, fullName: true, email: true } },
         fieldVisibility: { orderBy: { field: 'asc' } },
       },
@@ -47,6 +124,7 @@ export class PrismaLoadRepository implements LoadRepository {
     return {
       ...this.toLoad(stored),
       stops: stored.stops.map((stop) => this.toStop(stop)),
+      commodities: stored.commodities.map((commodity) => this.toCommodity(commodity)),
       assignedDriver: stored.assignedDriver,
       fieldVisibility: stored.fieldVisibility.map((item) => ({
         field: item.field as DriverVisibleField,
@@ -179,10 +257,29 @@ export class PrismaLoadRepository implements LoadRepository {
       factoringInformation: stored.factoringInformation,
       requiredDocuments: stored.requiredDocuments,
       internalComments: stored.internalComments,
+      customerName: stored.customerName,
+      billTo: stored.billTo,
+      operatingCompany: stored.operatingCompany,
+      enteredByUserId: stored.enteredByUserId,
+      enteredByName: stored.enteredByName,
+      bookedByName: stored.bookedByName,
+      bookedForTeam: stored.bookedForTeam,
+      bolNumber: stored.bolNumber,
+      pickupNumber: stored.pickupNumber,
+      poNumber: stored.poNumber,
+      consigneeReference: stored.consigneeReference,
+      preloadedTrailer: stored.preloadedTrailer,
+      preloadedTrailerNumber: stored.preloadedTrailerNumber,
+      driverPayAmount: stored.driverPayAmount,
+      driverPayMethod: stored.driverPayMethod,
     };
   }
 
   private toStop(stored: Stop): Stop {
+    return stored;
+  }
+
+  private toCommodity(stored: LoadCommodity): LoadCommodity {
     return stored;
   }
 }

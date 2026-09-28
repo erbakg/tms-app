@@ -5,6 +5,13 @@ export const StopType = {
 
 export type StopType = (typeof StopType)[keyof typeof StopType];
 
+export const AppointmentType = {
+  FCFS: 'FCFS',
+  BY_APPOINTMENT: 'BY_APPOINTMENT',
+} as const;
+
+export type AppointmentType = (typeof AppointmentType)[keyof typeof AppointmentType];
+
 export interface Stop {
   id: string;
   loadId: string;
@@ -17,6 +24,9 @@ export interface Stop {
   state: string | null;
   postalCode: string | null;
   countryCode: string;
+  appointmentType?: AppointmentType;
+  appointmentStartAt?: Date | null;
+  appointmentEndAt?: Date | null;
   appointmentAt: Date | null;
   referenceNumber: string | null;
   instructions: string | null;

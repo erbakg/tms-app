@@ -12,6 +12,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: UserRole;
+  fullName?: string;
 }
 
 export interface AuthUser extends AuthenticatedUser {

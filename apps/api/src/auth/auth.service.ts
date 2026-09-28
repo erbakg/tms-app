@@ -38,7 +38,7 @@ export class AuthService {
       role: input.role,
     });
 
-    return { id: user.id, email: user.email, role: user.role };
+    return { id: user.id, email: user.email, role: user.role, fullName: user.fullName };
   }
 
   async login(
@@ -51,7 +51,12 @@ export class AuthService {
       throw new UnauthorizedException({ code: 'INVALID_CREDENTIALS' });
     }
 
-    const authenticatedUser = { id: user.id, email: user.email, role: user.role };
+    const authenticatedUser = {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      fullName: user.fullName,
+    };
     return { accessToken: this.jwt.sign(authenticatedUser), user: authenticatedUser };
   }
 

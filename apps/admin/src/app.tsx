@@ -22,6 +22,7 @@ import { useEffect, useState } from 'react';
 import type { ChangeEvent, FormEvent, JSX, ReactNode } from 'react';
 
 import { api } from './api.js';
+import { CreateLoadPage } from './create-load.js';
 import {
   driverVisibleFields,
   type DocumentExtraction,
@@ -63,6 +64,7 @@ const DispatcherWorkspace = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isCreateLoadOpen, setIsCreateLoadOpen] = useState(false);
   const [reviewLoad, setReviewLoad] = useState<LoadDetails | null>(null);
 
   const refreshLoads = async (): Promise<void> => {
@@ -143,125 +145,157 @@ const DispatcherWorkspace = ({
       </header>
 
       <main id="top" className="main-content">
-        <section className="page-intro">
-          <div>
-            <p className="eyebrow">Dispatch control center</p>
-            <h1>
-              Move every load with <span>clarity.</span>
-            </h1>
-            <p className="intro-copy">
-              Review rate confirmations, validate AI data and assign drivers from one calm
-              workspace.
-            </p>
-          </div>
-          <button className="primary-button" onClick={() => setIsUploadOpen(true)}>
-            <FileUp size={19} /> Upload rate confirmation
-          </button>
-        </section>
-        <nav className="workspace-tabs" aria-label="Main navigation">
-          {navItems.map(({ label, icon: Icon }) => (
-            <button
-              key={label}
-              onClick={() => setActiveTab(label)}
-              className={activeTab === label ? 'workspace-tab active' : 'workspace-tab'}
-            >
-              <Icon size={18} /> {label}
-            </button>
-          ))}
-        </nav>
-        {error === null ? null : (
-          <div className="app-error" role="alert">
-            {error}
-            <button onClick={() => setError(null)} aria-label="Dismiss error">
-              <X size={17} />
-            </button>
-          </div>
-        )}
-        <section className="metric-grid" aria-label="Dispatch overview">
-          <Metric
-            label="Loads to review"
-            value={String(loads.filter((load) => load.status === 'DRAFT').length).padStart(2, '0')}
-            helper="Draft loads awaiting review"
-            accent="blue"
+        {isCreateLoadOpen ? (
+          <CreateLoadPage
+            session={session}
+            onCancel={() => setIsCreateLoadOpen(false)}
+            onSaved={(created) => {
+              setLoads((current) => [created, ...current]);
+              setIsCreateLoadOpen(false);
+              setActiveTab('Loads');
+              void openReview(created.id);
+            }}
           />
-          <Metric
-            label="Active loads"
-            value={String(loads.length).padStart(2, '0')}
-            helper="Loaded from the API"
-            accent="green"
-          />
-          <Metric
-            label="Confirmed loads"
-            value={String(loads.filter((load) => load.status === 'CONFIRMED').length).padStart(
-              2,
-              '0',
-            )}
-            helper="Ready for assignment"
-            accent="navy"
-          />
-          <Metric label="Exceptions" value="00" helper="No client-side exceptions" accent="amber" />
-        </section>
-        {activeTab === 'Drivers' ? (
-          <DriverDirectory accessToken={session.accessToken} />
-        ) : activeTab === 'Accounting' ? (
-          <AccountingOverview loads={loads} />
         ) : (
-          <section className="workspace-grid">
-            <article className="card load-queue">
-              <div className="card-heading">
-                <div>
-                  <p className="eyebrow">Live queue</p>
-                  <h2>{activeTab === 'Dispatch' ? 'Recent loads' : 'All loads'}</h2>
-                </div>
-                <button className="text-button" onClick={() => void refreshLoads()}>
-                  Refresh <ChevronDown size={15} />
+          <>
+            <section className="page-intro">
+              <div>
+                <p className="eyebrow">Dispatch control center</p>
+                <h1>
+                  Move every load with <span>clarity.</span>
+                </h1>
+                <p className="intro-copy">
+                  Review rate confirmations, validate AI data and assign drivers from one calm
+                  workspace.
+                </p>
+              </div>
+              <div className="header-creation-actions">
+                <button
+                  className="secondary-button create-load-secondary"
+                  aria-label="Upload rate confirmation"
+                  onClick={() => setIsUploadOpen(true)}
+                >
+                  <FileUp size={18} /> Upload RC
+                </button>
+                <button className="primary-button" onClick={() => setIsCreateLoadOpen(true)}>
+                  <Plus size={19} /> Create Load
                 </button>
               </div>
-              <div className="search-field">
-                <Search size={18} />
-                <input
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
-                  aria-label="Search loads"
-                  placeholder="Search load, broker or commodity"
-                />
+            </section>
+            <nav className="workspace-tabs" aria-label="Main navigation">
+              {navItems.map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  onClick={() => setActiveTab(label)}
+                  className={activeTab === label ? 'workspace-tab active' : 'workspace-tab'}
+                >
+                  <Icon size={18} /> {label}
+                </button>
+              ))}
+            </nav>
+            {error === null ? null : (
+              <div className="app-error" role="alert">
+                {error}
+                <button onClick={() => setError(null)} aria-label="Dismiss error">
+                  <X size={17} />
+                </button>
               </div>
-              <div className="load-list">
-                {isLoading ? <QueuePlaceholder text="Loading loads…" /> : null}
-                {!isLoading && filteredLoads.length === 0 ? (
-                  <QueuePlaceholder text="No loads found. Upload a rate confirmation to start." />
-                ) : null}
-                {filteredLoads.map((load) => (
-                  <LoadRow key={load.id} load={load} onOpen={openReview} />
-                ))}
-              </div>
-            </article>
-            <aside className="load-review-panel">
-              <FeaturedLoad load={featuredLoad} onOpen={openReview} />
-              <article className="profit-card">
-                <div className="profit-heading">
-                  <span>DISPATCH READINESS</span>
-                  <strong>
-                    {featuredLoad === undefined
-                      ? '0%'
-                      : featuredLoad.status === 'CONFIRMED'
-                        ? '100%'
-                        : '82%'}
-                  </strong>
-                </div>
-                <div className="progress-track">
-                  <span />
-                </div>
-                <p>
-                  {featuredLoad === undefined
-                    ? 'Upload a Rate Confirmation to begin review.'
-                    : featuredLoad.status === 'CONFIRMED'
-                      ? 'This Load is confirmed and available for driver assignment.'
-                      : 'AI data is ready. Confirm broker details before assigning a driver.'}
-                </p>
-              </article>
-            </aside>
-          </section>
+            )}
+            <section className="metric-grid" aria-label="Dispatch overview">
+              <Metric
+                label="Loads to review"
+                value={String(loads.filter((load) => load.status === 'DRAFT').length).padStart(
+                  2,
+                  '0',
+                )}
+                helper="Draft loads awaiting review"
+                accent="blue"
+              />
+              <Metric
+                label="Active loads"
+                value={String(loads.length).padStart(2, '0')}
+                helper="Loaded from the API"
+                accent="green"
+              />
+              <Metric
+                label="Confirmed loads"
+                value={String(loads.filter((load) => load.status === 'CONFIRMED').length).padStart(
+                  2,
+                  '0',
+                )}
+                helper="Ready for assignment"
+                accent="navy"
+              />
+              <Metric
+                label="Exceptions"
+                value="00"
+                helper="No client-side exceptions"
+                accent="amber"
+              />
+            </section>
+            {activeTab === 'Drivers' ? (
+              <DriverDirectory accessToken={session.accessToken} />
+            ) : activeTab === 'Accounting' ? (
+              <AccountingOverview loads={loads} />
+            ) : (
+              <section className="workspace-grid">
+                <article className="card load-queue">
+                  <div className="card-heading">
+                    <div>
+                      <p className="eyebrow">Live queue</p>
+                      <h2>{activeTab === 'Dispatch' ? 'Recent loads' : 'All loads'}</h2>
+                    </div>
+                    <button className="text-button" onClick={() => void refreshLoads()}>
+                      Refresh <ChevronDown size={15} />
+                    </button>
+                  </div>
+                  <div className="search-field">
+                    <Search size={18} />
+                    <input
+                      value={query}
+                      onChange={(event) => setQuery(event.target.value)}
+                      aria-label="Search loads"
+                      placeholder="Search load, broker or commodity"
+                    />
+                  </div>
+                  <div className="load-list">
+                    {isLoading ? <QueuePlaceholder text="Loading loads…" /> : null}
+                    {!isLoading && filteredLoads.length === 0 ? (
+                      <QueuePlaceholder text="No loads found. Upload a rate confirmation to start." />
+                    ) : null}
+                    {filteredLoads.map((load) => (
+                      <LoadRow key={load.id} load={load} onOpen={openReview} />
+                    ))}
+                  </div>
+                </article>
+                <aside className="load-review-panel">
+                  <FeaturedLoad load={featuredLoad} onOpen={openReview} />
+                  <article className="profit-card">
+                    <div className="profit-heading">
+                      <span>DISPATCH READINESS</span>
+                      <strong>
+                        {featuredLoad === undefined
+                          ? '0%'
+                          : featuredLoad.status === 'CONFIRMED'
+                            ? '100%'
+                            : '82%'}
+                      </strong>
+                    </div>
+                    <div className="progress-track">
+                      <span />
+                    </div>
+                    <p>
+                      {featuredLoad === undefined
+                        ? 'Upload a Rate Confirmation to begin review.'
+                        : featuredLoad.status === 'CONFIRMED'
+                          ? 'This Load is confirmed and available for driver assignment.'
+                          : 'AI data is ready. Confirm broker details before assigning a driver.'}
+                    </p>
+                  </article>
+                </aside>
+              </section>
+            )}
+          </>
         )}
       </main>
       {isUploadOpen ? (
@@ -429,7 +463,8 @@ const LoadRow = ({
       <span className="load-main">
         <strong>{load.internalLoadId ?? load.brokerLoadNumber ?? 'New draft'}</strong>
         <span>
-          {load.brokerName ?? 'Broker not reviewed'} · {load.commodity ?? 'Commodity not reviewed'}
+          {load.customerName ?? load.brokerName ?? 'Broker not reviewed'} ·{' '}
+          {load.commodity ?? 'Commodity not reviewed'}
         </span>
       </span>
       <span className="load-meta">
@@ -473,7 +508,7 @@ const FeaturedLoad = ({
       <div className="route-summary">
         <div>
           <span className="route-dot pickup" />
-          <strong>{load.brokerName ?? 'Broker pending'}</strong>
+          <strong>{load.customerName ?? load.brokerName ?? 'Customer pending'}</strong>
           <small>{load.commodity ?? 'Commodity pending'}</small>
         </div>
         <span className="route-line" />
@@ -484,7 +519,7 @@ const FeaturedLoad = ({
         </div>
       </div>
       <div className="review-details">
-        <Detail label="Broker" value={load.brokerName ?? 'Not reviewed'} />
+        <Detail label="Customer" value={load.customerName ?? load.brokerName ?? 'Not reviewed'} />
         <Detail label="Equipment" value={load.equipmentType ?? 'Not reviewed'} />
         <Detail label="Rate" value={load.rate ?? 'Not reviewed'} />
       </div>

@@ -9,6 +9,7 @@ const payloadSchema = z.object({
   sub: z.string().uuid(),
   email: z.string().email(),
   role: z.enum(UserRole),
+  fullName: z.string().max(200).optional(),
   exp: z.number().int().positive(),
 });
 
@@ -20,6 +21,7 @@ export class JwtService {
       sub: user.id,
       email: user.email,
       role: user.role,
+      fullName: user.fullName,
       exp: Math.floor(Date.now() / 1_000) + this.expiresInSeconds,
     });
     const unsignedToken = `${header}.${payload}`;
@@ -59,7 +61,12 @@ export class JwtService {
         return null;
       }
 
-      return { id: parsed.sub, email: parsed.email, role: parsed.role };
+      return {
+        id: parsed.sub,
+        email: parsed.email,
+        role: parsed.role,
+        fullName: parsed.fullName,
+      };
     } catch {
       return null;
     }

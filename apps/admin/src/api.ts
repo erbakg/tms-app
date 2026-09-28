@@ -2,6 +2,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string;
   role: 'ADMIN' | 'ACCOUNTING' | 'DISPATCHER' | 'DRIVER' | 'SAFETY';
+  fullName?: string;
 }
 
 export interface Session {
@@ -12,10 +13,24 @@ export interface Session {
 export interface Load {
   id: string;
   brokerLoadNumber: string | null;
+  customerName?: string | null;
+  billTo?: string | null;
+  operatingCompany?: string | null;
+  enteredByName?: string | null;
+  bookedByName?: string | null;
+  bookedForTeam?: string | null;
+  bolNumber?: string | null;
+  pickupNumber?: string | null;
+  poNumber?: string | null;
+  consigneeReference?: string | null;
   brokerName?: string | null;
   rate?: string | null;
   commodity?: string | null;
   equipmentType?: string | null;
+  preloadedTrailer?: boolean;
+  preloadedTrailerNumber?: string | null;
+  driverPayAmount?: string | null;
+  driverPayMethod?: string | null;
   specialInstructions?: string | null;
   internalLoadId: string | null;
   status: 'DRAFT' | 'CONFIRMED';
@@ -30,11 +45,29 @@ export interface Stop {
   addressLine1: string | null;
   city: string | null;
   state: string | null;
+  postalCode?: string | null;
+  appointmentType?: 'FCFS' | 'BY_APPOINTMENT';
+  appointmentStartAt?: string | null;
+  appointmentEndAt?: string | null;
   appointmentAt: string | null;
+  instructions?: string | null;
+}
+
+export interface LoadCommodity {
+  id?: string;
+  loadId?: string;
+  fromPosition: number;
+  toPosition: number;
+  commodity: string;
+  description: string | null;
+  weight: string | null;
+  units: number | null;
+  pallets: number | null;
 }
 
 export interface LoadDetails extends Load {
   stops: Stop[];
+  commodities?: LoadCommodity[];
   assignedDriver: Driver | null;
   fieldVisibility: Array<{ field: DriverVisibleField; visibleToDriver: boolean }>;
 }
@@ -133,6 +166,16 @@ export const api = {
     request('/users?role=DRIVER', {}, accessToken),
   getLoad: (accessToken: string, loadId: string): Promise<LoadDetails> =>
     request(`/loads/${loadId}`, {}, accessToken),
+  createManualLoad: (accessToken: string, input: ManualLoadInput): Promise<Load> =>
+    request(
+      '/loads/manual',
+      {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(input),
+      },
+      accessToken,
+    ),
   getDocuments: (accessToken: string, loadId: string): Promise<LoadDocument[]> =>
     request(`/loads/${loadId}/documents`, {}, accessToken),
   getDocumentDownloadUrl: (
@@ -261,3 +304,45 @@ export const api = {
     return request('/loads/rate-confirmations', { method: 'POST', body }, accessToken);
   },
 };
+
+export interface ManualLoadInput {
+  saveAsDraft: boolean;
+  customerName?: string;
+  billTo?: string;
+  operatingCompany?: string;
+  bookedByName?: string;
+  bookedForTeam?: string;
+  brokerLoadNumber?: string;
+  bolNumber?: string;
+  pickupNumber?: string;
+  poNumber?: string;
+  consigneeReference?: string;
+  equipmentType?: string;
+  preloadedTrailer: boolean;
+  preloadedTrailerNumber?: string;
+  stops: Array<{
+    type: 'PICKUP' | 'DELIVERY';
+    facilityName: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    appointmentType: 'FCFS' | 'BY_APPOINTMENT';
+    appointmentStartAt?: string | null;
+    appointmentEndAt?: string | null;
+    appointmentAt?: string | null;
+    instructions?: string;
+  }>;
+  commodities: Array<{
+    fromPosition: number;
+    toPosition: number;
+    commodity: string;
+    description?: string;
+    weight?: string;
+    units?: number;
+    pallets?: number;
+  }>;
+  rate?: string;
+  driverPayAmount?: string;
+  driverPayMethod?: string;
+}

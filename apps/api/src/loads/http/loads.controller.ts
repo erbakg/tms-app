@@ -14,15 +14,102 @@ import type { FastifyRequest } from 'fastify';
 import { z } from 'zod';
 
 import { Roles } from '../../auth/auth.decorators.js';
+import type { AuthenticatedUser } from '../../auth/auth.types.js';
 
 import { DRIVER_VISIBLE_FIELDS, LoadService } from '../application/load.service.js';
 import { RateConfirmationIntakeService } from '../application/rate-confirmation-intake.service.js';
-import type { Load, LoadDetails } from '../application/load.service.js';
+import type { CreateManualLoadInput, Load, LoadDetails } from '../application/load.service.js';
 import type { RateConfirmationIntakeResult } from '../application/rate-confirmation-intake.service.js';
 
 const createLoadDraftSchema = z.object({
   brokerLoadNumber: z.string().trim().min(1).max(100).optional(),
 });
+const manualStopSchema = z.object({
+  type: z.enum(['PICKUP', 'DELIVERY']),
+  facilityName: z.string().trim().max(200).default(''),
+  addressLine1: z.string().trim().max(200).default(''),
+  city: z.string().trim().max(100).default(''),
+  state: z.string().trim().max(100).default(''),
+  postalCode: z.string().trim().max(20).default(''),
+  appointmentType: z.enum(['FCFS', 'BY_APPOINTMENT']),
+  appointmentStartAt: z.string().datetime().nullable().optional(),
+  appointmentEndAt: z.string().datetime().nullable().optional(),
+  appointmentAt: z.string().datetime().nullable().optional(),
+  instructions: z.string().trim().max(4_000).optional(),
+});
+const manualCommoditySchema = z.object({
+  fromPosition: z.number().int().positive(),
+  toPosition: z.number().int().positive(),
+  commodity: z.string().trim().max(200).default(''),
+  description: z.string().trim().max(2_000).default(''),
+  weight: z.string().trim().max(100).default(''),
+  units: z.number().int().nonnegative().optional(),
+  pallets: z.number().int().nonnegative().optional(),
+});
+const createManualLoadSchema = z
+  .object({
+    saveAsDraft: z.boolean().default(false),
+    customerName: z.string().trim().max(200).optional(),
+    billTo: z.string().trim().max(200).optional(),
+    operatingCompany: z.string().trim().max(200).optional(),
+    bookedByName: z.string().trim().max(200).optional(),
+    bookedForTeam: z.string().trim().max(200).optional(),
+    brokerLoadNumber: z.string().trim().max(100).optional(),
+    bolNumber: z.string().trim().max(100).optional(),
+    pickupNumber: z.string().trim().max(100).optional(),
+    poNumber: z.string().trim().max(100).optional(),
+    consigneeReference: z.string().trim().max(100).optional(),
+    equipmentType: z.string().trim().max(100).optional(),
+    preloadedTrailer: z.boolean().default(false),
+    preloadedTrailerNumber: z.string().trim().max(100).optional(),
+    stops: z.array(manualStopSchema).default([]),
+    commodities: z.array(manualCommoditySchema).default([]),
+    rate: z.string().trim().max(100).optional(),
+    driverPayAmount: z.string().trim().max(100).optional(),
+    driverPayMethod: z.string().trim().max(50).optional(),
+  })
+  .superRefine((input, context) => {
+    if (!input.saveAsDraft && input.stops.length < 2) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['stops'],
+        message: 'At least two stops are required.',
+      });
+    }
+    if (!input.saveAsDraft) {
+      input.stops.forEach((stop, index) => {
+        if (
+          !stop.facilityName ||
+          !stop.addressLine1 ||
+          !stop.city ||
+          !stop.state ||
+          !stop.postalCode
+        ) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['stops', index],
+            message: 'Facility and address fields are required for every stop.',
+          });
+        }
+      });
+      input.commodities.forEach((commodity, index) => {
+        if (!commodity.commodity) {
+          context.addIssue({
+            code: z.ZodIssueCode.custom,
+            path: ['commodities', index, 'commodity'],
+            message: 'Commodity is required.',
+          });
+        }
+      });
+    }
+    if (input.preloadedTrailer && !input.preloadedTrailerNumber) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['preloadedTrailerNumber'],
+        message: 'Trailer number is required.',
+      });
+    }
+  });
 const supportedDocumentMimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png']);
 const optionalText = z.string().trim().max(4_000).nullable();
 const updateLoadSchema = z
@@ -105,6 +192,32 @@ export class LoadsController {
     }
 
     return this.loadService.createDraft(parsed.data);
+  }
+
+  @Post('manual')
+  createManual(@Req() request: FastifyRequest, @Body() body: unknown): Promise<Load> {
+    const parsed = createManualLoadSchema.safeParse(body);
+    if (!parsed.success) {
+      throw new BadRequestException({ code: 'INVALID_MANUAL_LOAD', issues: parsed.error.issues });
+    }
+
+    const user = (request as FastifyRequest & { user?: AuthenticatedUser }).user;
+    if (user === undefined) throw new BadRequestException({ code: 'USER_REQUIRED' });
+
+    const toDate = (value: string | null | undefined): Date | null | undefined =>
+      value === undefined || value === null ? value : new Date(value);
+    const input: CreateManualLoadInput = {
+      ...parsed.data,
+      enteredByUserId: user.id,
+      enteredByName: user.fullName ?? user.email,
+      stops: parsed.data.stops.map((stop) => ({
+        ...stop,
+        appointmentStartAt: toDate(stop.appointmentStartAt),
+        appointmentEndAt: toDate(stop.appointmentEndAt),
+        appointmentAt: toDate(stop.appointmentAt),
+      })),
+    };
+    return this.loadService.createManual(input);
   }
 
   @Get()

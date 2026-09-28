@@ -3,11 +3,22 @@ import { randomUUID } from 'node:crypto';
 import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 
 import { LoadStatus, type LoadStatus as LoadStatusValue } from '../domain/load-status.js';
-import type { Stop } from '../domain/stop.js';
+import type { AppointmentType, Stop, StopType } from '../domain/stop.js';
 
 export interface Load {
   id: string;
   brokerLoadNumber: string | null;
+  customerName?: string | null;
+  billTo?: string | null;
+  operatingCompany?: string | null;
+  enteredByUserId?: string | null;
+  enteredByName?: string | null;
+  bookedByName?: string | null;
+  bookedForTeam?: string | null;
+  bolNumber?: string | null;
+  pickupNumber?: string | null;
+  poNumber?: string | null;
+  consigneeReference?: string | null;
   createdAt: Date;
   internalLoadId: string | null;
   status: LoadStatusValue;
@@ -20,6 +31,10 @@ export interface Load {
   weight?: string | null;
   pieces?: string | null;
   equipmentType?: string | null;
+  preloadedTrailer?: boolean;
+  preloadedTrailerNumber?: string | null;
+  driverPayAmount?: string | null;
+  driverPayMethod?: string | null;
   temperatureRequirements?: string | null;
   specialInstructions?: string | null;
   detentionTerms?: string | null;
@@ -36,8 +51,64 @@ export interface Load {
   internalComments?: string | null;
 }
 
+export interface LoadCommodity {
+  id: string;
+  loadId: string;
+  fromPosition: number;
+  toPosition: number;
+  commodity: string;
+  description: string | null;
+  weight: string | null;
+  units: number | null;
+  pallets: number | null;
+}
+
 export interface CreateLoadDraftInput {
   brokerLoadNumber?: string;
+}
+
+export interface CreateManualLoadInput {
+  saveAsDraft: boolean;
+  enteredByUserId: string;
+  enteredByName: string;
+  customerName?: string;
+  billTo?: string;
+  operatingCompany?: string;
+  bookedByName?: string;
+  bookedForTeam?: string;
+  brokerLoadNumber?: string;
+  bolNumber?: string;
+  pickupNumber?: string;
+  poNumber?: string;
+  consigneeReference?: string;
+  equipmentType?: string;
+  preloadedTrailer: boolean;
+  preloadedTrailerNumber?: string;
+  stops: Array<{
+    type: StopType;
+    facilityName: string;
+    addressLine1: string;
+    city: string;
+    state: string;
+    postalCode: string;
+    appointmentType: AppointmentType;
+    appointmentStartAt?: Date | null;
+    appointmentEndAt?: Date | null;
+    appointmentAt?: Date | null;
+    instructions?: string;
+  }>;
+  commodities: Array<{
+    fromPosition: number;
+    toPosition: number;
+    commodity: string;
+    description?: string;
+    weight?: string;
+    units?: number;
+    pallets?: number;
+  }>;
+  rate?: string;
+  driverPayAmount?: string;
+  driverPayMethod?: string;
 }
 
 export type UpdateLoadInput = Partial<
@@ -72,6 +143,7 @@ export type UpdateLoadInput = Partial<
 
 export interface LoadRepository {
   create(load: Load): Promise<Load>;
+  createManual?(input: CreateManualLoadInput): Promise<Load>;
   findById(id: string): Promise<LoadDetails | null>;
   confirm(id: string): Promise<Load | null>;
   update(id: string, input: UpdateLoadInput): Promise<Load | null>;
@@ -87,6 +159,7 @@ export interface LoadRepository {
 
 export interface LoadDetails extends Load {
   stops: Stop[];
+  commodities?: LoadCommodity[];
   assignedDriver: { id: string; fullName: string; email: string } | null;
   fieldVisibility: Array<{ field: DriverVisibleField; visibleToDriver: boolean }>;
 }
@@ -127,6 +200,13 @@ export class LoadService {
     };
 
     return this.loadRepository.create(draft);
+  }
+
+  createManual(input: CreateManualLoadInput): Promise<Load> {
+    if (this.loadRepository.createManual === undefined) {
+      throw new Error('Manual load creation is not available.');
+    }
+    return this.loadRepository.createManual(input);
   }
 
   findById(id: string): Promise<LoadDetails | null> {

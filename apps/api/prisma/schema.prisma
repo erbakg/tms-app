@@ -25,6 +25,11 @@ enum StopType {
   DELIVERY
 }
 
+enum AppointmentType {
+  FCFS
+  BY_APPOINTMENT
+}
+
 enum DocumentKind {
   RATE_CONFIRMATION
   POD
@@ -54,6 +59,17 @@ model Load {
   sequenceNumber   Int?                  @unique
   internalLoadId   String?               @unique
   brokerLoadNumber String?
+  customerName     String?
+  billTo            String?
+  operatingCompany String?
+  enteredByUserId   String?              @db.Uuid
+  enteredByName     String?
+  bookedByName      String?
+  bookedForTeam     String?
+  bolNumber         String?
+  pickupNumber      String?
+  poNumber          String?
+  consigneeReference String?
   brokerName       String?
   brokerContactName String?
   brokerContactPhone String?
@@ -63,6 +79,10 @@ model Load {
   weight           String?
   pieces           String?
   equipmentType    String?
+  preloadedTrailer Boolean               @default(false)
+  preloadedTrailerNumber String?
+  driverPayAmount  String?
+  driverPayMethod  String?
   temperatureRequirements String?
   specialInstructions String?
   detentionTerms   String?
@@ -83,6 +103,7 @@ model Load {
   updatedAt        DateTime              @updatedAt @db.Timestamptz(3)
   assignedDriver   User?                 @relation("AssignedDriver", fields: [assignedDriverId], references: [id])
   stops            Stop[]
+  commodities      LoadCommodity[]
   documents        LoadDocument[]
   fieldVisibility  LoadFieldVisibility[]
 }
@@ -99,6 +120,9 @@ model Stop {
   state           String?
   postalCode      String?
   countryCode     String    @default("US") @db.Char(2)
+  appointmentType AppointmentType @default(FCFS)
+  appointmentStartAt DateTime? @db.Timestamptz(3)
+  appointmentEndAt DateTime? @db.Timestamptz(3)
   appointmentAt   DateTime? @db.Timestamptz(3)
   referenceNumber String?
   instructions    String?
@@ -107,6 +131,23 @@ model Stop {
   load            Load      @relation(fields: [loadId], references: [id], onDelete: Cascade)
 
   @@unique([loadId, position])
+}
+
+model LoadCommodity {
+  id          String   @id @default(uuid()) @db.Uuid
+  loadId      String   @db.Uuid
+  fromPosition Int
+  toPosition  Int
+  commodity   String
+  description String?
+  weight      String?
+  units       Int?
+  pallets     Int?
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+  load        Load     @relation(fields: [loadId], references: [id], onDelete: Cascade)
+
+  @@index([loadId])
 }
 
 model LoadDocument {
