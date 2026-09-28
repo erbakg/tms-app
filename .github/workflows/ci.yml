@@ -38,7 +38,7 @@ jobs:
           --health-retries 10
     env:
       DATABASE_URL: postgresql://312kg:312kg_local_only@localhost:5432/312kg_tms?schema=public
-      S3_ENDPOINT: http://localhost:9000
+      S3_ENDPOINT: http://localhost:9090
       S3_REGION: us-east-1
       S3_BUCKET: 312kg-tms-test
       S3_ACCESS_KEY_ID: 312kg_local_only
@@ -72,14 +72,11 @@ jobs:
       - name: Apply database migrations
         run: pnpm --filter @312kg/api exec prisma migrate deploy --schema prisma/schema.prisma
 
-      - name: Start MinIO
+      - name: Start S3Mock
         run: |
-          docker run --detach --name minio --publish 9000:9000 \
-            --env MINIO_ROOT_USER=312kg_local_only \
-            --env MINIO_ROOT_PASSWORD=312kg_local_only \
-            quay.io/minio/minio:RELEASE.2025-09-06T17-38-46Z server /data
+          docker run --detach --name s3mock --publish 9090:9090 adobe/s3mock:latest
           for attempt in {1..12}; do
-            curl --fail --silent http://localhost:9000/minio/health/live && exit 0
+            curl --fail --silent http://localhost:9090/favicon.ico && exit 0
             sleep 2
           done
           exit 1
