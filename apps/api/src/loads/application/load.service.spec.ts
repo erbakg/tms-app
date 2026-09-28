@@ -29,6 +29,47 @@ describe('LoadService', () => {
     expect(load.status).toBe('DRAFT');
   });
 
+  it('delegates manual load creation to the repository', async () => {
+    const created: Load = {
+      id: '91e7d340-b142-4ca0-96d8-4f5b41c89887',
+      brokerLoadNumber: 'RC-42',
+      createdAt: new Date(),
+      internalLoadId: '312KG-10042',
+      status: 'CONFIRMED',
+    };
+    const repository = {
+      ...createRepository(),
+      createManual: async () => created,
+    };
+    const service = new LoadService(repository);
+
+    await expect(
+      service.createManual({
+        saveAsDraft: false,
+        enteredByUserId: 'ed081ab1-77a8-4866-bf3a-aa6ce51ad757',
+        enteredByName: 'Alex',
+        preloadedTrailer: false,
+        stops: [],
+        commodities: [],
+      }),
+    ).resolves.toEqual(created);
+  });
+
+  it('fails clearly when manual load creation is unavailable on a repository', () => {
+    const service = new LoadService(createRepository());
+
+    expect(() =>
+      service.createManual({
+        saveAsDraft: true,
+        enteredByUserId: 'ed081ab1-77a8-4866-bf3a-aa6ce51ad757',
+        enteredByName: 'Alex',
+        preloadedTrailer: false,
+        stops: [],
+        commodities: [],
+      }),
+    ).toThrow('Manual load creation is not available.');
+  });
+
   it('returns the persisted draft with its stops', async () => {
     const existing: LoadDetails = {
       id: '91e7d340-b142-4ca0-96d8-4f5b41c89887',
